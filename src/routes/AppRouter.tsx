@@ -1,4 +1,4 @@
-import { Navigate, Route, BrowserRouter, Routes } from 'react-router-dom'
+import { Navigate, Route, BrowserRouter, HashRouter, Routes } from 'react-router-dom'
 import { CourierLayout } from '../components/layout/CourierLayout'
 import { useBootstrapSession } from '../hooks/useBootstrapSession'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
@@ -16,8 +16,10 @@ export function AppRouter() {
   useOnlineStatus()
   useSyncQueue()
 
+  const Router = String(import.meta.env.VITE_ROUTER_MODE ?? 'browser') === 'hash' ? HashRouter : BrowserRouter
+
   return (
-    <BrowserRouter>
+    <Router>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
 
@@ -73,6 +75,6 @@ export function AppRouter() {
         />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
-    </BrowserRouter>
+    </Router>
   )
 }

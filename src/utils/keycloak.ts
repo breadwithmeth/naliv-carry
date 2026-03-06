@@ -8,9 +8,14 @@ const keycloak = new Keycloak({
 })
 
 const enableSilentSso = String(import.meta.env.VITE_KEYCLOAK_SILENT_SSO ?? 'false') === 'true'
+const useHashRouter = String(import.meta.env.VITE_ROUTER_MODE ?? 'browser') === 'hash'
 
 let initialized = false
 let initPromise: Promise<boolean> | null = null
+
+function buildAppUrl(path: string): string {
+  return useHashRouter ? `${window.location.origin}/#${path}` : `${window.location.origin}${path}`
+}
 
 export async function initKeycloak(onLoad: 'check-sso' | 'login-required' = 'check-sso'): Promise<boolean> {
   if (initialized) {
@@ -44,11 +49,11 @@ export async function initKeycloak(onLoad: 'check-sso' | 'login-required' = 'che
 
 export async function keycloakLogin(): Promise<void> {
   await initKeycloak('check-sso')
-  await keycloak.login({ redirectUri: `${window.location.origin}/dashboard` })
+  await keycloak.login({ redirectUri: buildAppUrl('/dashboard') })
 }
 
 export async function keycloakLogout(): Promise<void> {
-  await keycloak.logout({ redirectUri: `${window.location.origin}/login` })
+  await keycloak.logout({ redirectUri: buildAppUrl('/login') })
 }
 
 export async function updateKeycloakToken(minValidity = 30): Promise<string | null> {
