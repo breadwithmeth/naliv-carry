@@ -42,7 +42,7 @@ export function OrderCard({ order, onTakeOrder }: Props) {
         </Link>
         {onTakeOrder && (
           <Button className="touch-action" onClick={() => onTakeOrder(order.id)}>
-            Взять
+            Взять в доставку
           </Button>
         )}
       </Space>

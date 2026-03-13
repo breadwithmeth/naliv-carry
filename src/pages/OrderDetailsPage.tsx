@@ -53,7 +53,8 @@ export function OrderDetailsPage() {
     }
 
     const normalizedDigits = selectedOrder.customerPhone.replace(/\D/g, '')
-    const text = encodeURIComponent(`Здравствуйте! Это курьер по заказу #${selectedOrder.id}.`)
+    const addressText = selectedOrder.address?.trim() || selectedOrder.deliveryAddressName?.trim() || 'вашему адресу'
+    const text = encodeURIComponent(`Здравствуйте! Это курьер по адресу: ${addressText}.`)
     return `https://wa.me/${normalizedDigits}?text=${text}`
   }, [selectedOrder])
 
@@ -175,14 +176,9 @@ export function OrderDetailsPage() {
           locale={{ emptyText: 'Нет позиций' }}
           renderItem={(item) => (
             <List.Item>
-              <Space direction="vertical" style={{ width: '100%' }} size={2}>
-                <Typography.Text strong>{item.name ?? '-'}</Typography.Text>
-                <Typography.Text type="secondary">{item.description ?? '-'}</Typography.Text>
-                <Typography.Text type="secondary">
-                  Кол-во: {item.amount ?? '-'} {item.unit ?? ''} • Цена: {item.price ?? '-'} • Сумма:{' '}
-                  {item.totalCost ?? '-'}
-                </Typography.Text>
-              </Space>
+              <Typography.Text strong>
+                {item.name ?? '-'} x {item.amount ?? 1}
+              </Typography.Text>
             </List.Item>
           )}
         />
@@ -220,7 +216,7 @@ export function OrderDetailsPage() {
               selectedOrder.status === 'delivered'
             }
           >
-            Подтвердить доставку
+            Выдать заказ
           </Button>
         </Space>
       </Card>

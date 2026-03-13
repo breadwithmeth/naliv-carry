@@ -167,6 +167,82 @@ export interface ShiftDeliverySummary {
   avgDeliveryPrice: number
 }
 
+export interface PaymentTypeStat {
+  paymentTypeId: number
+  paymentTypeName: string | null
+  canceled: number
+  notCanceled: number
+  canceledAmount: number
+  notCanceledAmount: number
+  totalAmount: number
+}
+
+export interface PaymentStatsOrder {
+  orderId: number
+  paymentTypeId: number | null
+  paymentTypeName: string | null
+  isCanceled: boolean
+  amountTotal: number
+  amountBeforeDelivery: number
+  deliveryPrice: number
+}
+
+export interface PaymentStatsPeriod {
+  startDate: string
+  endDate: string
+}
+
+export interface PaymentStatsData {
+  courierId: number
+  shift: {
+    id: string
+    startedAt: string
+    endedAt: string | null
+    status: ShiftStatus
+  } | null
+  period: PaymentStatsPeriod
+  stats: PaymentTypeStat[]
+  orders: PaymentStatsOrder[]
+  totalPaymentTypes: number
+}
+
+export interface BackendPaymentTypeStat {
+  payment_type_id: number
+  payment_type_name: string | null
+  canceled: number
+  not_canceled: number
+  canceled_amount?: number
+  not_canceled_amount?: number
+  total_amount?: number
+}
+
+export interface BackendPaymentStatsOrder {
+  order_id: number
+  payment_type_id: number | null
+  payment_type_name: string | null
+  is_canceled: boolean
+  amount_total?: number
+  amount_before_delivery?: number
+  delivery_price?: number
+}
+
+export interface BackendPaymentStatsData {
+  courier_id: number
+  shift: {
+    id: string
+    started_at: string
+    ended_at: string | null
+    status: ShiftStatus
+  } | null
+  period: {
+    start_date: string
+    end_date: string
+  }
+  stats: BackendPaymentTypeStat[]
+  orders?: BackendPaymentStatsOrder[]
+  total_payment_types: number
+}
+
 export interface BackendDeliveryOrder {
   order_id: number
   order_uuid: string | null

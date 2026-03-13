@@ -13,20 +13,86 @@ const useHashRouter = String(import.meta.env.VITE_ROUTER_MODE ?? 'browser') === 
 let initialized = false
 let initPromise: Promise<boolean> | null = null
 
+const KEYCLOAK_CALLBACK_PARAMS = [
+  'code',
+  'state',
+  'session_state',
+  'iss',
+  'error',
+  'error_description',
+]
+
+function normalizeHashCallbackUrl(): void {
+  if (!useHashRouter) {
+    return
+  }
+
+  const hashValue = window.location.hash
+  const match = hashValue.match(/#([^&]+)&(.+)/)
+
+  if (!match) {
+    return
+  }
+
+  const hashPath = match[1]
+  const possibleParams = match[2]
+  const hasAuthParams = KEYCLOAK_CALLBACK_PARAMS.some((param) =>
+    new URLSearchParams(possibleParams).has(param),
+  )
+
+  if (!hasAuthParams) {
+    return
+  }
+
+  const normalizedUrl = `${window.location.origin}${window.location.pathname}?${possibleParams}#${hashPath}`
+  window.history.replaceState(window.history.state, '', normalizedUrl)
+}
+
+function cleanupKeycloakQueryParams(): void {
+  const params = new URLSearchParams(window.location.search)
+  let changed = false
+
+  for (const key of KEYCLOAK_CALLBACK_PARAMS) {
+    if (params.has(key)) {
+      params.delete(key)
+      changed = true
+    }
+  }
+
+  if (!changed) {
+    return
+  }
+
+  const nextSearch = params.toString()
+  const nextUrl = `${window.location.origin}${window.location.pathname}${nextSearch ? `?${nextSearch}` : ''}${window.location.hash}`
+  window.history.replaceState(window.history.state, '', nextUrl)
+}
+
 function buildAppUrl(path: string): string {
   return useHashRouter ? `${window.location.origin}/#${path}` : `${window.location.origin}${path}`
 }
 
 export async function initKeycloak(onLoad: 'check-sso' | 'login-required' = 'check-sso'): Promise<boolean> {
+  normalizeHashCallbackUrl()
+
   if (initialized) {
     return keycloak.authenticated ?? false
   }
 
   if (!initPromise) {
+    const shouldUseRedirectCheckSso = !(useHashRouter && onLoad === 'check-sso' && !enableSilentSso)
     const initOptions: Parameters<typeof keycloak.init>[0] = {
-      onLoad,
       pkceMethod: 'S256',
       checkLoginIframe: false,
+    }
+
+    if (shouldUseRedirectCheckSso) {
+      initOptions.onLoad = onLoad
+    }
+
+    if (useHashRouter) {
+      // Query callback mode avoids collisions with hash-based client routing.
+      initOptions.responseMode = 'query'
     }
 
     if (enableSilentSso) {
@@ -37,7 +103,12 @@ export async function initKeycloak(onLoad: 'check-sso' | 'login-required' = 'che
       .init(initOptions)
       .then((authenticated) => {
         initialized = true
+        cleanupKeycloakQueryParams()
         return authenticated
+      })
+      .catch((error) => {
+        cleanupKeycloakQueryParams()
+        throw error
       })
       .finally(() => {
         initPromise = null

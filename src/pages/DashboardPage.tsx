@@ -1,79 +1,72 @@
-import { Card, Col, Row, Statistic, Typography, Button, Input, DatePicker, Space, List, Tag, message } from 'antd'
-import { CopyOutlined } from '@ant-design/icons'
-import dayjs, { type Dayjs } from 'dayjs'
+import { Card, Col, Row, Statistic, Typography, Button, Input, Space, Tag, List, Empty, Table, message } from 'antd'
+import dayjs from 'dayjs'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useCourierStore } from '../store/courierStore'
 import { useOrdersStore } from '../store/ordersStore'
 import { useShiftsStore } from '../store/shiftsStore'
 
 export function DashboardPage() {
   const navigate = useNavigate()
-  const deliveredStats = useOrdersStore((state) => state.deliveredStats)
-  const deliveredOrders = useOrdersStore((state) =>
-    Array.isArray(state.deliveredOrders) ? state.deliveredOrders : [],
-  )
-  const fetchDeliveredOrders = useOrdersStore((state) => state.fetchDeliveredOrders)
-  const isLoading = useOrdersStore((state) => state.isLoading)
-  const shifts = useShiftsStore((state) => state.shifts)
+  const orders = useOrdersStore((state) => (Array.isArray(state.orders) ? state.orders : []))
+  const fetchOrders = useOrdersStore((state) => state.fetchOrders)
   const activeShift = useShiftsStore((state) => state.activeShift)
   const shiftSummaries = useShiftsStore((state) => state.summaries)
   const isShiftLoading = useShiftsStore((state) => state.isLoading)
-  const isCalculatingShifts = useShiftsStore((state) => state.isCalculating)
   const shiftsError = useShiftsStore((state) => state.errorMessage)
+  const paymentStats = useShiftsStore((state) => state.paymentStats)
+  const isPaymentStatsLoading = useShiftsStore((state) => state.isPaymentStatsLoading)
   const openShift = useShiftsStore((state) => state.openShift)
   const closeShift = useShiftsStore((state) => state.closeShift)
   const loadShifts = useShiftsStore((state) => state.loadShifts)
   const calculateShiftDeliveries = useShiftsStore((state) => state.calculateShiftDeliveries)
+  const loadPaymentStats = useShiftsStore((state) => state.loadPaymentStats)
   const [searchOrderId, setSearchOrderId] = useState('')
-  const profile = useCourierStore((state) => state.profile)
-  const [period, setPeriod] = useState<[Dayjs, Dayjs]>([
-    dayjs().startOf('month'),
-    dayjs().endOf('day'),
-  ])
 
-  const workforceId =
-    profile?.workforce_employee_id ??
-    profile?.keycloak_id ??
-    (profile?.employee_id ? String(profile.employee_id) : undefined) ??
-    (profile?.courier_id ? String(profile.courier_id) : undefined) ??
-    '-'
+  const currentOrdersCount = useMemo(() => {
+    return orders.filter((order) => order.status !== 'delivered' && order.status !== 'failed').length
+  }, [orders])
 
-  const handleCopyWorkforceId = async (): Promise<void> => {
-    if (workforceId === '-') {
-      return
+  const activeDeliveryOrders = useMemo(() => {
+    return orders.filter((order) => order.status === 'on_the_way' || order.statusCode === 3)
+  }, [orders])
+
+  const activeShiftSummary = useMemo(() => {
+    if (!activeShift) {
+      return null
     }
 
-    try {
-      await navigator.clipboard.writeText(workforceId)
-      message.success('ID скопирован')
-    } catch {
-      message.error('Не удалось скопировать ID')
-    }
-  }
-
-  const stats = useMemo(() => {
-    return {
-      totalDelivered: deliveredStats.totalDelivered,
-      totalEarnings: deliveredStats.totalEarnings,
-      avgDeliveryPrice: deliveredStats.avgDeliveryPrice,
-      loadedOrders: deliveredOrders.length,
-    }
-  }, [deliveredOrders.length, deliveredStats.avgDeliveryPrice, deliveredStats.totalDelivered, deliveredStats.totalEarnings])
+    return shiftSummaries[activeShift.id] ?? null
+  }, [activeShift, shiftSummaries])
 
   useEffect(() => {
-    fetchDeliveredOrders(period[0].format('YYYY-MM-DD'), period[1].format('YYYY-MM-DD')).catch(() => {
-      message.error('Не удалось загрузить доставленные заказы за период')
+    fetchOrders().catch(() => {
+      // Optional data for current orders counter.
     })
-  }, [fetchDeliveredOrders, period])
+  }, [fetchOrders])
 
   useEffect(() => {
     loadShifts()
-      .then(() => calculateShiftDeliveries())
+      .then(async () => {
+        await calculateShiftDeliveries()
+      })
       .catch(() => {
         message.error('Не удалось загрузить смены')
       })
   }, [calculateShiftDeliveries, loadShifts])
+
+  const handleLoadPaymentStatsForShift = async (): Promise<void> => {
+    if (!activeShift) {
+      message.warning('Нет активной смены для загрузки отчета')
+      return
+    }
+
+    try {
+      await loadPaymentStats(activeShift.id)
+      message.success('Отчет по типам оплаты загружен')
+    } catch {
+      message.error('Не удалось загрузить статистику по типам оплаты')
+    }
+  }
 
   const handleOpenOrderById = (): void => {
     const normalizedOrderId = searchOrderId.trim()
@@ -87,15 +80,7 @@ export function DashboardPage() {
   }
 
   const handleOpenMyDeliveries = (): void => {
-    navigate('/orders?mode=my')
-  }
-
-  const handleApplyPeriod = async (): Promise<void> => {
-    try {
-      await fetchDeliveredOrders(period[0].format('YYYY-MM-DD'), period[1].format('YYYY-MM-DD'))
-    } catch {
-      message.error('Не удалось загрузить данные за выбранный период')
-    }
+    navigate('/orders')
   }
 
   const handleOpenShift = async (): Promise<void> => {
@@ -119,34 +104,8 @@ export function DashboardPage() {
   return (
     <>
       <Typography.Title level={4} style={{ margin: 0 }}>
-        Доставленные заказы за период
+        Главная
       </Typography.Title>
-
-      <Card title="Поиск заказа по ID">
-        <Input.Search
-          className="touch-action"
-          placeholder="Введите ID заказа"
-          value={searchOrderId}
-          onChange={(event) => setSearchOrderId(event.target.value)}
-          onSearch={handleOpenOrderById}
-          enterButton="Открыть"
-        />
-      </Card>
-
-      <Card title="Быстрые действия">
-        <Row gutter={[8, 8]}>
-          <Col span={12}>
-            <Button className="touch-action" block type="primary" onClick={handleOpenMyDeliveries}>
-              Открыть заказы
-            </Button>
-          </Col>
-          <Col span={12}>
-            <Button className="touch-action" block onClick={() => navigate('/map')}>
-              Открыть карту
-            </Button>
-          </Col>
-        </Row>
-      </Card>
 
       <Card title="Смены">
         <Space direction="vertical" style={{ width: '100%' }}>
@@ -169,105 +128,119 @@ export function DashboardPage() {
             >
               Закрыть смену
             </Button>
-            <Button
-              className="touch-action"
-              loading={isCalculatingShifts}
-              onClick={() => void calculateShiftDeliveries()}
-            >
-              Пересчитать доставки по сменам
-            </Button>
           </Space>
 
           <Typography.Text>
             Текущая смена:{' '}
             {activeShift ? (
-              <Tag color="processing">Активна с {dayjs(activeShift.startedAt).format('DD.MM.YYYY HH:mm')}</Tag>
+              <Button type="link" style={{ paddingInline: 0 }} onClick={() => void handleLoadPaymentStatsForShift()}>
+                <Tag color="processing">Активна с {dayjs(activeShift.startedAt).format('DD.MM.YYYY HH:mm')}</Tag>
+              </Button>
             ) : (
               <Tag>Нет активной смены</Tag>
             )}
           </Typography.Text>
-          <Space size="small" wrap>
-            <Typography.Text>Workforce ID: {workforceId}</Typography.Text>
-            <Button
-              className="touch-action"
-              size="small"
-              icon={<CopyOutlined />}
-              onClick={() => void handleCopyWorkforceId()}
-              disabled={workforceId === '-'}
-            >
-              Копировать
-            </Button>
-          </Space>
+
+          <Typography.Text>
+            Текущие заказы: <Typography.Text strong>{currentOrdersCount}</Typography.Text>
+          </Typography.Text>
 
           {shiftsError ? <Typography.Text type="danger">{shiftsError}</Typography.Text> : null}
-
-          <List
-            size="small"
-            dataSource={shifts}
-            locale={{ emptyText: 'Смены не найдены' }}
-            renderItem={(shift) => {
-              const summary = shiftSummaries[shift.id]
-              return (
-                <List.Item>
-                  <Space direction="vertical" size={0} style={{ width: '100%' }}>
-                    <Typography.Text>
-                      {dayjs(shift.startedAt).format('DD.MM.YYYY HH:mm')} —{' '}
-                      {shift.endedAt ? dayjs(shift.endedAt).format('DD.MM.YYYY HH:mm') : 'по настоящее время'}
-                    </Typography.Text>
-                    <Typography.Text type="secondary">
-                      Статус: {shift.status} • Доставки: {summary?.deliveries ?? 0} • Заработок:{' '}
-                      {summary?.earnings ?? 0} ₸ • Средняя доставка: {summary?.avgDeliveryPrice ?? 0} ₸
-                    </Typography.Text>
-                  </Space>
-                </List.Item>
-              )
-            }}
-          />
         </Space>
       </Card>
 
-      <Card title="Период отчёта">
+      <Card title="Поиск заказа по ID">
+        <Input.Search
+          className="touch-action"
+          placeholder="Введите ID заказа"
+          value={searchOrderId}
+          onChange={(event) => setSearchOrderId(event.target.value)}
+          onSearch={handleOpenOrderById}
+          enterButton="Открыть"
+        />
+      </Card>
+
+      <Card title="Отчёт по сменам">
         <Space direction="vertical" style={{ width: '100%' }}>
-          <DatePicker.RangePicker
-            className="touch-action"
-            style={{ width: '100%' }}
-            value={period}
-            onChange={(value) => {
-              if (!value || !value[0] || !value[1]) {
-                return
-              }
+          <Typography.Text type="secondary">
+            {activeShift
+              ? `Активная смена с ${dayjs(activeShift.startedAt).format('DD.MM.YYYY HH:mm')}`
+              : 'Активной смены нет'}
+          </Typography.Text>
 
-              setPeriod([value[0], value[1]])
-            }}
+          <Row gutter={[12, 12]}>
+            <Col xs={12}>
+              <Card>
+                <Statistic title="Всего доставлено" value={activeShiftSummary?.deliveries ?? 0} loading={isShiftLoading} />
+              </Card>
+            </Col>
+            <Col xs={12}>
+              <Card>
+                <Statistic title="Общий заработок за смену" value={activeShiftSummary?.earnings ?? 0} suffix="₸" loading={isShiftLoading} />
+              </Card>
+            </Col>
+          </Row>
+
+          <Typography.Text strong>Статистика по типам оплаты</Typography.Text>
+          <Typography.Text type="secondary">Нажмите на текущую смену выше, чтобы загрузить отчет.</Typography.Text>
+          <Table
+            size="small"
+            pagination={false}
+            loading={isPaymentStatsLoading}
+            dataSource={paymentStats?.stats ?? []}
+            rowKey={(record) => String(record.paymentTypeId)}
+            locale={{ emptyText: 'Нет данных по типам оплаты' }}
+            columns={[
+              {
+                title: 'Тип оплаты',
+                dataIndex: 'paymentTypeName',
+                key: 'paymentTypeName',
+              },
+              {
+                title: 'Не отменено',
+                dataIndex: 'notCanceled',
+                key: 'notCanceled',
+                width: 120,
+              },
+              {
+                title: 'Отменено',
+                dataIndex: 'canceled',
+                key: 'canceled',
+                width: 120,
+              },
+            ]}
           />
-          <Button className="touch-action" type="primary" loading={isLoading} onClick={() => void handleApplyPeriod()}>
-            Обновить статистику
-          </Button>
         </Space>
       </Card>
 
-      <Row gutter={[12, 12]}>
-        <Col xs={12}>
-          <Card>
-            <Statistic title="Всего доставлено" value={stats.totalDelivered} />
-          </Card>
-        </Col>
-        <Col xs={12}>
-          <Card>
-            <Statistic title="Общий заработок" value={stats.totalEarnings} suffix="₸" />
-          </Card>
-        </Col>
-        <Col xs={12}>
-          <Card>
-            <Statistic title="Средняя доставка" value={stats.avgDeliveryPrice} suffix="₸" />
-          </Card>
-        </Col>
-        <Col xs={12}>
-          <Card>
-            <Statistic title="Загружено заказов" value={stats.loadedOrders} />
-          </Card>
-        </Col>
-      </Row>
+      <Card title="Заказы в доставке сейчас">
+        {activeDeliveryOrders.length ? (
+          <List
+            dataSource={activeDeliveryOrders}
+            renderItem={(order) => (
+              <List.Item
+                actions={[
+                  <Button
+                    key={order.id}
+                    type="link"
+                    onClick={() => navigate(`/orders/${order.id}`)}
+                  >
+                    Открыть
+                  </Button>,
+                ]}
+              >
+                <List.Item.Meta title={`#${order.id} • ${order.customerName}`} description={order.address} />
+              </List.Item>
+            )}
+          />
+        ) : (
+          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Нет активных доставок" />
+        )}
+      </Card>
+
+      <Button className="touch-action" block type="primary" onClick={handleOpenMyDeliveries}>
+        Мои доставки
+      </Button>
 
     </>
   )

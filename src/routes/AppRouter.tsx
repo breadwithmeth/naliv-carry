@@ -9,6 +9,8 @@ import { MapPage } from '../pages/MapPage'
 import { OrderDetailsPage } from '../pages/OrderDetailsPage'
 import { OrdersPage } from '../pages/OrdersPage'
 import { ProfilePage } from '../pages/ProfilePage'
+import { ShiftPaymentStatsPage } from '../pages/ShiftPaymentStatsPage'
+import { ShiftsPage } from '../pages/ShiftsPage'
 import { ProtectedRoute } from './ProtectedRoute'
 
 export function AppRouter() {
@@ -59,6 +61,26 @@ export function AppRouter() {
             <ProtectedRoute>
               <CourierLayout>
                 <MapPage />
+              </CourierLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/shifts"
+          element={
+            <ProtectedRoute>
+              <CourierLayout>
+                <ShiftsPage />
+              </CourierLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/shifts/payment-stats"
+          element={
+            <ProtectedRoute>
+              <CourierLayout>
+                <ShiftPaymentStatsPage />
               </CourierLayout>
             </ProtectedRoute>
           }

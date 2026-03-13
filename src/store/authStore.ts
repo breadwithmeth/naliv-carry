@@ -61,6 +61,13 @@ export const useAuthStore = create<AuthState>((set) => ({
         isAuthenticated: isKeycloakAuthenticated(),
         isInitialized: true,
       })
+    } catch {
+      set({
+        user: null,
+        accessToken: null,
+        isAuthenticated: false,
+        isInitialized: true,
+      })
     } finally {
       set({ isLoading: false })
     }

@@ -1,6 +1,7 @@
 import {
   DashboardOutlined,
   EnvironmentOutlined,
+  FieldTimeOutlined,
   MenuOutlined,
   OrderedListOutlined,
   UserOutlined,
@@ -22,6 +23,7 @@ export function CourierLayout({ children }: Props) {
 
   const menuItems = [
     { key: '/dashboard', label: 'Главная', icon: <DashboardOutlined /> },
+    { key: '/shifts', label: 'Смены', icon: <FieldTimeOutlined /> },
     { key: '/orders', label: 'Заказы', icon: <OrderedListOutlined /> },
     { key: '/map', label: 'Карта', icon: <EnvironmentOutlined /> },
     { key: '/profile', label: 'Профиль', icon: <UserOutlined /> },

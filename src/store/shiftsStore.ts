@@ -1,20 +1,23 @@
 import { AxiosError } from 'axios'
 import { create } from 'zustand'
 import { getDeliveredOrders } from '../api/ordersApi'
-import { getShifts, startShift, stopShift } from '../api/courierApi'
-import type { CourierShift, ShiftDeliverySummary } from '../types/models'
+import { getPaymentStats, getShifts, startShift, stopShift } from '../api/courierApi'
+import type { CourierShift, PaymentStatsData, ShiftDeliverySummary } from '../types/models'
 
 interface ShiftsState {
   shifts: CourierShift[]
   activeShift: CourierShift | null
   isLoading: boolean
   isCalculating: boolean
+  isPaymentStatsLoading: boolean
   errorMessage: string | null
   summaries: Record<string, ShiftDeliverySummary>
+  paymentStats: PaymentStatsData | null
   openShift: () => Promise<void>
   closeShift: () => Promise<void>
   loadShifts: () => Promise<void>
   calculateShiftDeliveries: () => Promise<void>
+  loadPaymentStats: (shiftId: string) => Promise<void>
 }
 
 function mapError(error: unknown): string {
@@ -43,8 +46,10 @@ export const useShiftsStore = create<ShiftsState>((set, get) => ({
   activeShift: null,
   isLoading: false,
   isCalculating: false,
+  isPaymentStatsLoading: false,
   errorMessage: null,
   summaries: {},
+  paymentStats: null,
   openShift: async () => {
     set({ isLoading: true, errorMessage: null })
     try {
@@ -130,6 +135,18 @@ export const useShiftsStore = create<ShiftsState>((set, get) => ({
       set({ summaries })
     } finally {
       set({ isCalculating: false })
+    }
+  },
+  loadPaymentStats: async (shiftId: string) => {
+    set({ isPaymentStatsLoading: true })
+
+    try {
+      const data = await getPaymentStats({ shiftId })
+      set({ paymentStats: data })
+    } catch {
+      set({ paymentStats: null })
+    } finally {
+      set({ isPaymentStatsLoading: false })
     }
   },
 }))
