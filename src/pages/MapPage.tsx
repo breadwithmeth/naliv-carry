@@ -1,6 +1,7 @@
 import { Button, Card, List, Space, Typography, message } from 'antd'
 import { EnvironmentOutlined } from '@ant-design/icons'
 import { useEffect } from 'react'
+import { useSnackbar } from '../hooks/useSnackbar'
 import { useCourierStore } from '../store/courierStore'
 import { useOrdersStore } from '../store/ordersStore'
 import { build2gisNavigationUrl } from '../utils/navigation'
@@ -12,6 +13,7 @@ export function MapPage() {
   const loadCities = useCourierStore((state) => state.loadCities)
   const loadLocation = useCourierStore((state) => state.loadLocation)
   const saveLocation = useCourierStore((state) => state.saveLocation)
+  const { showError } = useSnackbar()
 
   useEffect(() => {
     loadCities().catch(() => {
@@ -24,7 +26,7 @@ export function MapPage() {
 
   const handleSaveCurrentLocation = () => {
     if (!navigator.geolocation) {
-      message.error('Геолокация не поддерживается браузером')
+      showError('Геолокация не поддерживается браузером')
       return
     }
 
@@ -34,11 +36,11 @@ export function MapPage() {
           await saveLocation(position.coords.latitude, position.coords.longitude)
           message.success('Геолокация курьера сохранена')
         } catch {
-          message.error('Не удалось сохранить геолокацию')
+          showError('Не удалось сохранить геолокацию')
         }
       },
       () => {
-        message.error('Не удалось получить текущие координаты')
+        showError('Не удалось получить текущие координаты')
       },
     )
   }

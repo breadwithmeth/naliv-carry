@@ -2,6 +2,7 @@ import { Button, Card, Descriptions, Form, Input, Space, Typography, message } f
 import { CopyOutlined } from '@ant-design/icons'
 import { useEffect } from 'react'
 import { changeCourierPassword } from '../api/courierApi'
+import { useSnackbar } from '../hooks/useSnackbar'
 import { useAuthStore } from '../store/authStore'
 import { useCourierStore } from '../store/courierStore'
 import { useSessionStore } from '../store/sessionStore'
@@ -19,6 +20,7 @@ export function ProfilePage() {
 
   const deviceInfo = useSessionStore((state) => state.deviceInfo)
   const hydrateDeviceInfo = useSessionStore((state) => state.hydrateDeviceInfo)
+  const { showError } = useSnackbar()
 
   useEffect(() => {
     hydrateDeviceInfo()
@@ -32,7 +34,7 @@ export function ProfilePage() {
       await changeCourierPassword(values)
       message.success('Пароль изменен')
     } catch {
-      message.error('Не удалось изменить пароль')
+      showError('Не удалось изменить пароль')
     }
   }
 
@@ -52,7 +54,7 @@ export function ProfilePage() {
       await navigator.clipboard.writeText(workforceId)
       message.success('ID скопирован')
     } catch {
-      message.error('Не удалось скопировать ID')
+      showError('Не удалось скопировать ID')
     }
   }
 

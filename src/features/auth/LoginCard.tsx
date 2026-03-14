@@ -2,11 +2,13 @@ import { SafetyCertificateOutlined } from '@ant-design/icons'
 import { Button, Card, Typography, message } from 'antd'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
+import { useSnackbar } from '../../hooks/useSnackbar'
 
 export function LoginCard() {
   const login = useAuthStore((state) => state.login)
   const isLoading = useAuthStore((state) => state.isLoading)
   const navigate = useNavigate()
+  const { showError } = useSnackbar()
 
   const handleLogin = async () => {
     try {
@@ -14,7 +16,7 @@ export function LoginCard() {
       message.success('Вход выполнен')
       navigate('/dashboard', { replace: true })
     } catch {
-      message.error('Не удалось выполнить вход')
+      showError('Не удалось выполнить вход')
     }
   }
 

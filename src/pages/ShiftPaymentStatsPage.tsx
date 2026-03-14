@@ -1,9 +1,10 @@
 import { ArrowLeftOutlined } from '@ant-design/icons'
-import { Button, Card, Empty, Space, Table, Tag, Typography, message } from 'antd'
+import { Button, Card, Empty, Space, Table, Tag, Typography } from 'antd'
 import dayjs from 'dayjs'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getPaymentStats } from '../api/courierApi'
+import { useSnackbar } from '../hooks/useSnackbar'
 import type { PaymentStatsData, PaymentStatsOrder } from '../types/models'
 
 interface GroupedPaymentStat {
@@ -22,29 +23,30 @@ interface GroupedPaymentStat {
 export function ShiftPaymentStatsPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const [isLoading, setIsLoading] = useState(false)
-  const [paymentStats, setPaymentStats] = useState<PaymentStatsData | null>(null)
-
   const shiftId = searchParams.get('shiftId') ?? '-'
+  const [isLoading, setIsLoading] = useState(() => {
+    return shiftId !== '-'
+  })
+  const [paymentStats, setPaymentStats] = useState<PaymentStatsData | null>(null)
+  const { showError } = useSnackbar()
 
   useEffect(() => {
     if (!shiftId || shiftId === '-') {
-      message.error('Не передан ID смены для отчета')
+      showError('Не передан ID смены для отчета')
       return
     }
 
-    setIsLoading(true)
     getPaymentStats({ shiftId })
       .then((data) => {
         setPaymentStats(data)
       })
       .catch(() => {
-        message.error('Не удалось загрузить статистику по типам оплаты')
+        showError('Не удалось загрузить статистику по типам оплаты')
       })
       .finally(() => {
         setIsLoading(false)
       })
-  }, [shiftId])
+  }, [shiftId, showError])
 
   const groupedStats = useMemo(() => {
     const grouped = new Map<string, GroupedPaymentStat>()

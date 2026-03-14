@@ -2,6 +2,7 @@ import { Card, Col, Row, Statistic, Typography, Button, Input, Space, Tag, List,
 import dayjs from 'dayjs'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useSnackbar } from '../hooks/useSnackbar'
 import { useOrdersStore } from '../store/ordersStore'
 import { useShiftsStore } from '../store/shiftsStore'
 
@@ -21,6 +22,7 @@ export function DashboardPage() {
   const calculateShiftDeliveries = useShiftsStore((state) => state.calculateShiftDeliveries)
   const loadPaymentStats = useShiftsStore((state) => state.loadPaymentStats)
   const [searchOrderId, setSearchOrderId] = useState('')
+  const { showError } = useSnackbar()
 
   const currentOrdersCount = useMemo(() => {
     return orders.filter((order) => order.status !== 'delivered' && order.status !== 'failed').length
@@ -50,9 +52,9 @@ export function DashboardPage() {
         await calculateShiftDeliveries()
       })
       .catch(() => {
-        message.error('Не удалось загрузить смены')
+        showError('Не удалось загрузить смены')
       })
-  }, [calculateShiftDeliveries, loadShifts])
+  }, [calculateShiftDeliveries, loadShifts, showError])
 
   const handleLoadPaymentStatsForShift = async (): Promise<void> => {
     if (!activeShift) {
@@ -64,7 +66,7 @@ export function DashboardPage() {
       await loadPaymentStats(activeShift.id)
       message.success('Отчет по типам оплаты загружен')
     } catch {
-      message.error('Не удалось загрузить статистику по типам оплаты')
+      showError('Не удалось загрузить статистику по типам оплаты')
     }
   }
 
@@ -88,7 +90,7 @@ export function DashboardPage() {
       await openShift()
       message.success('Смена открыта')
     } catch {
-      message.error(useShiftsStore.getState().errorMessage ?? 'Не удалось открыть смену')
+      showError(useShiftsStore.getState().errorMessage ?? 'Не удалось открыть смену')
     }
   }
 
@@ -97,7 +99,7 @@ export function DashboardPage() {
       await closeShift()
       message.success('Смена закрыта')
     } catch {
-      message.error(useShiftsStore.getState().errorMessage ?? 'Не удалось закрыть смену')
+      showError(useShiftsStore.getState().errorMessage ?? 'Не удалось закрыть смену')
     }
   }
 

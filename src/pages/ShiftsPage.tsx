@@ -2,6 +2,7 @@ import { Card, Col, Row, Statistic, Typography, Button, Space, Tag, List, messag
 import dayjs from 'dayjs'
 import { useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useSnackbar } from '../hooks/useSnackbar'
 import { useShiftsStore } from '../store/shiftsStore'
 
 export function ShiftsPage() {
@@ -15,6 +16,7 @@ export function ShiftsPage() {
   const closeShift = useShiftsStore((state) => state.closeShift)
   const loadShifts = useShiftsStore((state) => state.loadShifts)
   const calculateShiftDeliveries = useShiftsStore((state) => state.calculateShiftDeliveries)
+  const { showError } = useSnackbar()
 
   const activeShiftSummary = useMemo(() => {
     if (!activeShift) {
@@ -30,16 +32,16 @@ export function ShiftsPage() {
         await calculateShiftDeliveries()
       })
       .catch(() => {
-        message.error('Не удалось загрузить смены')
+        showError('Не удалось загрузить смены')
       })
-  }, [calculateShiftDeliveries, loadShifts])
+  }, [calculateShiftDeliveries, loadShifts, showError])
 
   const handleOpenShift = async (): Promise<void> => {
     try {
       await openShift()
       message.success('Смена открыта')
     } catch {
-      message.error(useShiftsStore.getState().errorMessage ?? 'Не удалось открыть смену')
+      showError(useShiftsStore.getState().errorMessage ?? 'Не удалось открыть смену')
     }
   }
 
@@ -48,7 +50,7 @@ export function ShiftsPage() {
       await closeShift()
       message.success('Смена закрыта')
     } catch {
-      message.error(useShiftsStore.getState().errorMessage ?? 'Не удалось закрыть смену')
+      showError(useShiftsStore.getState().errorMessage ?? 'Не удалось закрыть смену')
     }
   }
 

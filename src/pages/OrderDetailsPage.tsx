@@ -13,6 +13,7 @@ import { EnvironmentOutlined, PhoneOutlined, WhatsAppOutlined } from '@ant-desig
 import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { StatusTag } from '../components/common/StatusTag'
+import { useSnackbar } from '../hooks/useSnackbar'
 import { useOrdersStore } from '../store/ordersStore'
 import { build2gisNavigationUrl } from '../utils/navigation'
 
@@ -22,11 +23,11 @@ export function OrderDetailsPage() {
   const takeOrder = useOrdersStore((state) => state.takeOrder)
   const deliverOrder = useOrdersStore((state) => state.deliverOrder)
   const selectedOrder = useOrdersStore((state) => state.selectedOrder)
-  const [isBusy, setIsBusy] = useState(true)
+  const [isBusy, setIsBusy] = useState(() => Boolean(orderId))
+  const { showError } = useSnackbar()
 
   useEffect(() => {
     if (!orderId) {
-      setIsBusy(false)
       return
     }
 
@@ -67,7 +68,7 @@ export function OrderDetailsPage() {
       await takeOrder(selectedOrder.id)
       message.success('Заказ взят в доставку')
     } catch {
-      message.error('Не удалось взять заказ в доставку')
+      showError('Не удалось взять заказ в доставку')
     }
   }
 
@@ -80,11 +81,11 @@ export function OrderDetailsPage() {
       await deliverOrder(selectedOrder.id)
       message.success('Доставка подтверждена')
     } catch {
-      message.error('Не удалось подтвердить доставку')
+      showError('Не удалось подтвердить доставку')
     }
   }
 
-  if (isBusy) {
+  if (orderId && isBusy) {
     return <Spin />
   }
 
