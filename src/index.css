@@ -5,6 +5,13 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  --app-bg: #101218;
+  --app-text: #eceff4;
+}
+
+:root[data-theme='light'] {
+  --app-bg: #f5f7fa;
+  --app-text: #141821;
 }
 
 * {
@@ -21,7 +28,8 @@ body,
 }
 
 body {
-  background: #f5f7fa;
+  background: var(--app-bg);
+  color: var(--app-text);
 }
 
 .page-container {

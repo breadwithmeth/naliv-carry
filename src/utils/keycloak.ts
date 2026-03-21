@@ -80,14 +80,10 @@ export async function initKeycloak(onLoad: 'check-sso' | 'login-required' = 'che
   }
 
   if (!initPromise) {
-    const shouldUseRedirectCheckSso = !(useHashRouter && onLoad === 'check-sso' && !enableSilentSso)
     const initOptions: Parameters<typeof keycloak.init>[0] = {
       pkceMethod: 'S256',
       checkLoginIframe: false,
-    }
-
-    if (shouldUseRedirectCheckSso) {
-      initOptions.onLoad = onLoad
+      onLoad,
     }
 
     if (useHashRouter) {
