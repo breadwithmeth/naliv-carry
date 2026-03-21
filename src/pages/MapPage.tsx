@@ -1,4 +1,4 @@
-import { Button, Card, List, Space, Typography, message } from 'antd'
+import { Alert, Button, Card, List, Space, Typography, message } from 'antd'
 import { EnvironmentOutlined } from '@ant-design/icons'
 import { useEffect } from 'react'
 import { useSnackbar } from '../hooks/useSnackbar'
@@ -14,6 +14,11 @@ export function MapPage() {
   const loadLocation = useCourierStore((state) => state.loadLocation)
   const saveLocation = useCourierStore((state) => state.saveLocation)
   const { showError } = useSnackbar()
+
+  const lastLocationDate = location?.updated_at ? new Date(location.updated_at) : null
+  const locationAgeMs = lastLocationDate ? Date.now() - lastLocationDate.getTime() : null
+  const isLocationStale =
+    !location || !lastLocationDate || Number.isNaN(lastLocationDate.getTime()) || (locationAgeMs ?? 0) > 6 * 60 * 60 * 1000
 
   useEffect(() => {
     loadCities().catch(() => {
@@ -52,11 +57,24 @@ export function MapPage() {
       </Typography.Title>
       <Card>
         <Space direction="vertical" style={{ width: '100%' }}>
+          {isLocationStale ? (
+            <Alert
+              type="warning"
+              showIcon
+              message="Геолокация неактуальна"
+              description="Последняя геолокация отсутствует или обновлялась более 6 часов назад. Скачайте приложение Traccar Client."
+            />
+          ) : null}
           <Typography.Text>
             {location
               ? `Текущая геолокация: ${location.lat}, ${location.lon}`
               : 'Геолокация курьера не найдена'}
           </Typography.Text>
+          {location?.updated_at ? (
+            <Typography.Text type="secondary">
+              Последнее обновление: {new Date(location.updated_at).toLocaleString('ru-RU')}
+            </Typography.Text>
+          ) : null}
           <Button type="primary" className="touch-action" onClick={handleSaveCurrentLocation}>
             Сохранить мою геолокацию
           </Button>

@@ -1,8 +1,9 @@
-import { Card, Col, Row, Statistic, Typography, Button, Input, Space, Tag, List, Empty, Table, message } from 'antd'
+import { Alert, Card, Col, Row, Statistic, Typography, Button, Input, Space, Tag, List, Empty, Table, message } from 'antd'
 import dayjs from 'dayjs'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSnackbar } from '../hooks/useSnackbar'
+import { useCourierStore } from '../store/courierStore'
 import { useOrdersStore } from '../store/ordersStore'
 import { useShiftsStore } from '../store/shiftsStore'
 
@@ -11,6 +12,8 @@ export function DashboardPage() {
   const orders = useOrdersStore((state) => (Array.isArray(state.orders) ? state.orders : []))
   const fetchOrders = useOrdersStore((state) => state.fetchOrders)
   const activeShift = useShiftsStore((state) => state.activeShift)
+  const location = useCourierStore((state) => state.location)
+  const loadLocation = useCourierStore((state) => state.loadLocation)
   const shiftSummaries = useShiftsStore((state) => state.summaries)
   const isShiftLoading = useShiftsStore((state) => state.isLoading)
   const shiftsError = useShiftsStore((state) => state.errorMessage)
@@ -23,6 +26,11 @@ export function DashboardPage() {
   const loadPaymentStats = useShiftsStore((state) => state.loadPaymentStats)
   const [searchOrderId, setSearchOrderId] = useState('')
   const { showError } = useSnackbar()
+
+  const lastLocationDate = location?.updated_at ? new Date(location.updated_at) : null
+  const locationAgeMs = lastLocationDate ? Date.now() - lastLocationDate.getTime() : null
+  const isLocationStale =
+    !location || !lastLocationDate || Number.isNaN(lastLocationDate.getTime()) || (locationAgeMs ?? 0) > 6 * 60 * 60 * 1000
 
   const currentOrdersCount = useMemo(() => {
     return orders.filter((order) => order.status !== 'delivered' && order.status !== 'failed').length
@@ -45,6 +53,12 @@ export function DashboardPage() {
       // Optional data for current orders counter.
     })
   }, [fetchOrders])
+
+  useEffect(() => {
+    loadLocation().catch(() => {
+      // Optional UI data.
+    })
+  }, [loadLocation])
 
   useEffect(() => {
     loadShifts()
@@ -108,6 +122,15 @@ export function DashboardPage() {
       <Typography.Title level={4} style={{ margin: 0 }}>
         Главная
       </Typography.Title>
+
+      {isLocationStale ? (
+        <Alert
+          type="warning"
+          showIcon
+          message="Геолокация неактуальна"
+          description="Последняя геолокация отсутствует или обновлялась более 6 часов назад. Скачайте приложение Traccar Client."
+        />
+      ) : null}
 
       <Card title="Смены">
         <Space direction="vertical" style={{ width: '100%' }}>
