@@ -60,6 +60,7 @@ export interface Order {
   costSummary?: {
     itemsTotal?: number
     deliveryPrice?: number
+    deliveryServiceFee?: number
     serviceFee?: number
     bonusUsed?: number
     subtotal?: number
@@ -177,33 +178,51 @@ export interface PaymentTypeStat {
   totalAmount: number
 }
 
-export interface PaymentStatsOrder {
-  orderId: number
-  paymentTypeId: number | null
-  paymentTypeName: string | null
-  isCanceled: boolean
-  amountTotal: number
-  amountBeforeDelivery: number
-  deliveryPrice: number
-}
-
 export interface PaymentStatsPeriod {
   startDate: string
   endDate: string
 }
 
-export interface PaymentStatsData {
-  courierId: number
+export interface ShiftPaymentReportSummary {
+  totalShifts: number
+  closedShifts: number
+  unfinishedShifts: number
+  totalOrders: number
+  totalAmount: number
+}
+
+export interface ShiftPaymentReportShift {
   shift: {
     id: string
     startedAt: string
     endedAt: string | null
     status: ShiftStatus
-  } | null
+    isClosed: boolean
+  }
   period: PaymentStatsPeriod
-  stats: PaymentTypeStat[]
-  orders: PaymentStatsOrder[]
-  totalPaymentTypes: number
+  paymentTypes: PaymentTypeStat[]
+  orders: Array<{
+    orderId: number
+    paymentTypeId: number | null
+    paymentTypeName: string | null
+    isCanceled: boolean
+    amountTotal: number
+    deliveryServiceFee: number
+    deliveryCost: number
+  }>
+  totals: {
+    ordersCount: number
+    totalAmount: number
+  }
+}
+
+export interface ShiftPaymentReportData {
+  courierId: number
+  employeeId: string
+  requestedShiftId: string | null
+  generatedAt: string
+  summary: ShiftPaymentReportSummary
+  shifts: ShiftPaymentReportShift[]
 }
 
 export interface BackendPaymentTypeStat {
@@ -216,31 +235,45 @@ export interface BackendPaymentTypeStat {
   total_amount?: number
 }
 
-export interface BackendPaymentStatsOrder {
-  order_id: number
-  payment_type_id: number | null
-  payment_type_name: string | null
-  is_canceled: boolean
-  amount_total?: number
-  amount_before_delivery?: number
-  delivery_price?: number
-}
-
-export interface BackendPaymentStatsData {
+export interface BackendShiftPaymentReportData {
   courier_id: number
-  shift: {
-    id: string
-    started_at: string
-    ended_at: string | null
-    status: ShiftStatus
-  } | null
-  period: {
-    start_date: string
-    end_date: string
+  employeeId: string
+  requested_shift_id: string | null
+  generated_at: string
+  summary: {
+    total_shifts: number
+    closed_shifts: number
+    unfinished_shifts: number
+    total_orders: number
+    total_amount: number
   }
-  stats: BackendPaymentTypeStat[]
-  orders?: BackendPaymentStatsOrder[]
-  total_payment_types: number
+  shifts: Array<{
+    shift: {
+      id: string
+      started_at: string
+      ended_at: string | null
+      status: ShiftStatus
+      is_closed: boolean
+    }
+    period: {
+      start_date: string
+      end_date: string
+    }
+    payment_types: BackendPaymentTypeStat[]
+    orders: Array<{
+      order_id: number
+      payment_type_id: number | null
+      payment_type_name: string | null
+      is_canceled: boolean
+      amount_total?: number
+      delivery_service_fee?: number
+      delivery_cost?: number
+    }>
+    totals: {
+      orders_count: number
+      total_amount: number
+    }
+  }>
 }
 
 export interface BackendDeliveryOrder {
@@ -361,6 +394,7 @@ export interface BackendOrderCostSummary {
   items_total?: number
   products_total?: number
   delivery_price?: number
+  delivery_service_fee?: number
   service_fee?: number
   bonus_used?: number
   subtotal?: number

@@ -1,6 +1,6 @@
-import { Card, Col, Row, Statistic, Typography, Button, Space, Tag, List, message } from 'antd'
+import { Card, Typography, Button, Space, Tag, List, message } from 'antd'
 import dayjs from 'dayjs'
-import { useEffect, useMemo } from 'react'
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSnackbar } from '../hooks/useSnackbar'
 import { useShiftsStore } from '../store/shiftsStore'
@@ -17,14 +17,6 @@ export function ShiftsPage() {
   const loadShifts = useShiftsStore((state) => state.loadShifts)
   const calculateShiftDeliveries = useShiftsStore((state) => state.calculateShiftDeliveries)
   const { showError } = useSnackbar()
-
-  const activeShiftSummary = useMemo(() => {
-    if (!activeShift) {
-      return null
-    }
-
-    return shiftSummaries[activeShift.id] ?? null
-  }, [activeShift, shiftSummaries])
 
   useEffect(() => {
     loadShifts()
@@ -57,7 +49,7 @@ export function ShiftsPage() {
   const handleOpenShiftPaymentStats = (shiftId: string): void => {
     const searchParams = new URLSearchParams({ shiftId })
 
-    navigate(`/shifts/payment-stats?${searchParams.toString()}`)
+    navigate(`/shifts/payment-report?${searchParams.toString()}`)
   }
 
   return (
@@ -105,36 +97,6 @@ export function ShiftsPage() {
           </Typography.Text>
 
           {shiftsError ? <Typography.Text type="danger">{shiftsError}</Typography.Text> : null}
-        </Space>
-      </Card>
-
-      <Card title="Отчёт по сменам">
-        <Space direction="vertical" style={{ width: '100%' }}>
-          <Typography.Text type="secondary">
-            {activeShift
-              ? `Активная смена с ${dayjs(activeShift.startedAt).format('DD.MM.YYYY HH:mm')}`
-              : 'Активной смены нет'}
-          </Typography.Text>
-
-          <Row gutter={[12, 12]}>
-            <Col xs={12}>
-              <Card>
-                <Statistic title="Всего доставлено" value={activeShiftSummary?.deliveries ?? 0} loading={isShiftLoading} />
-              </Card>
-            </Col>
-            <Col xs={12}>
-              <Card>
-                <Statistic
-                  title="Общий заработок за смену"
-                  value={activeShiftSummary?.earnings ?? 0}
-                  suffix="₸"
-                  loading={isShiftLoading}
-                />
-              </Card>
-            </Col>
-          </Row>
-
-          <Typography.Text type="secondary">Нажмите на смену, чтобы открыть подробный отчет по оплатам.</Typography.Text>
         </Space>
       </Card>
 

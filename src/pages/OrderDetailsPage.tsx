@@ -24,6 +24,7 @@ export function OrderDetailsPage() {
   const deliverOrder = useOrdersStore((state) => state.deliverOrder)
   const selectedOrder = useOrdersStore((state) => state.selectedOrder)
   const [isBusy, setIsBusy] = useState(() => Boolean(orderId))
+  const [isTakingOrder, setIsTakingOrder] = useState(false)
   const { showError } = useSnackbar()
 
   useEffect(() => {
@@ -60,15 +61,21 @@ export function OrderDetailsPage() {
   }, [selectedOrder])
 
   const onTakeOrder = async () => {
-    if (!selectedOrder) {
+    if (!selectedOrder || isTakingOrder) {
       return
     }
 
+    const selectedOrderId = selectedOrder.id
+    setIsTakingOrder(true)
+
     try {
-      await takeOrder(selectedOrder.id)
+      await takeOrder(selectedOrderId)
+      await fetchOrderById(selectedOrderId)
       message.success('Заказ взят в доставку')
     } catch {
       showError('Не удалось взять заказ в доставку')
+    } finally {
+      setIsTakingOrder(false)
     }
   }
 
@@ -191,6 +198,9 @@ export function OrderDetailsPage() {
           <Descriptions.Item label="Стоимость доставки">
             {selectedOrder.costSummary?.deliveryPrice ?? '-'}
           </Descriptions.Item>
+          <Descriptions.Item label="Сервисный сбор доставки">
+            {selectedOrder.costSummary?.deliveryServiceFee ?? '-'}
+          </Descriptions.Item>
           <Descriptions.Item label="Сервисный сбор">{selectedOrder.costSummary?.serviceFee ?? '-'}</Descriptions.Item>
           <Descriptions.Item label="Списано бонусов">{selectedOrder.costSummary?.bonusUsed ?? '-'}</Descriptions.Item>
           <Descriptions.Item label="Промежуточный итог">{selectedOrder.costSummary?.subtotal ?? '-'}</Descriptions.Item>
@@ -204,7 +214,12 @@ export function OrderDetailsPage() {
             className="touch-action"
             type="primary"
             onClick={onTakeOrder}
-            disabled={selectedOrder.statusCode === 3 || selectedOrder.status === 'on_the_way'}
+            loading={isTakingOrder}
+            disabled={
+              isTakingOrder ||
+              selectedOrder.statusCode === 3 ||
+              selectedOrder.status === 'on_the_way'
+            }
           >
             Взять в доставку
           </Button>

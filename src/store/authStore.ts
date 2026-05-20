@@ -7,6 +7,7 @@ import {
   isKeycloakAuthenticated,
   keycloakLogin,
   keycloakLogout,
+  updateKeycloakToken,
 } from '../utils/keycloak.ts'
 
 interface AuthState {
@@ -76,7 +77,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     await keycloakLogin()
   },
   refreshToken: async () => {
-    const accessToken = getKeycloakAccessToken()
+    const accessToken = await updateKeycloakToken(120)
     set({
       accessToken,
       isAuthenticated: isKeycloakAuthenticated(),

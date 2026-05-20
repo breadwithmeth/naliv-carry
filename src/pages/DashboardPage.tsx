@@ -1,4 +1,4 @@
-import { Alert, Card, Col, Row, Statistic, Typography, Button, Input, Space, Tag, List, Empty, Table, message } from 'antd'
+import { Alert, Card, Typography, Button, Input, Space, Tag, List, Empty, message } from 'antd'
 import dayjs from 'dayjs'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -7,6 +7,8 @@ import { useCourierStore } from '../store/courierStore'
 import { useOrdersStore } from '../store/ordersStore'
 import { useShiftsStore } from '../store/shiftsStore'
 
+const PAGE_OPENED_AT_MS = Date.now()
+
 export function DashboardPage() {
   const navigate = useNavigate()
   const orders = useOrdersStore((state) => (Array.isArray(state.orders) ? state.orders : []))
@@ -14,21 +16,16 @@ export function DashboardPage() {
   const activeShift = useShiftsStore((state) => state.activeShift)
   const location = useCourierStore((state) => state.location)
   const loadLocation = useCourierStore((state) => state.loadLocation)
-  const shiftSummaries = useShiftsStore((state) => state.summaries)
   const isShiftLoading = useShiftsStore((state) => state.isLoading)
   const shiftsError = useShiftsStore((state) => state.errorMessage)
-  const paymentStats = useShiftsStore((state) => state.paymentStats)
-  const isPaymentStatsLoading = useShiftsStore((state) => state.isPaymentStatsLoading)
   const openShift = useShiftsStore((state) => state.openShift)
   const closeShift = useShiftsStore((state) => state.closeShift)
   const loadShifts = useShiftsStore((state) => state.loadShifts)
-  const calculateShiftDeliveries = useShiftsStore((state) => state.calculateShiftDeliveries)
-  const loadPaymentStats = useShiftsStore((state) => state.loadPaymentStats)
   const [searchOrderId, setSearchOrderId] = useState('')
   const { showError } = useSnackbar()
 
   const lastLocationDate = location?.updated_at ? new Date(location.updated_at) : null
-  const locationAgeMs = lastLocationDate ? Date.now() - lastLocationDate.getTime() : null
+  const locationAgeMs = lastLocationDate ? PAGE_OPENED_AT_MS - lastLocationDate.getTime() : null
   const isLocationStale =
     !location || !lastLocationDate || Number.isNaN(lastLocationDate.getTime()) || (locationAgeMs ?? 0) > 6 * 60 * 60 * 1000
 
@@ -39,14 +36,6 @@ export function DashboardPage() {
   const activeDeliveryOrders = useMemo(() => {
     return orders.filter((order) => order.status === 'on_the_way' || order.statusCode === 3)
   }, [orders])
-
-  const activeShiftSummary = useMemo(() => {
-    if (!activeShift) {
-      return null
-    }
-
-    return shiftSummaries[activeShift.id] ?? null
-  }, [activeShift, shiftSummaries])
 
   useEffect(() => {
     fetchOrders().catch(() => {
@@ -62,27 +51,10 @@ export function DashboardPage() {
 
   useEffect(() => {
     loadShifts()
-      .then(async () => {
-        await calculateShiftDeliveries()
-      })
       .catch(() => {
         showError('Не удалось загрузить смены')
       })
-  }, [calculateShiftDeliveries, loadShifts, showError])
-
-  const handleLoadPaymentStatsForShift = async (): Promise<void> => {
-    if (!activeShift) {
-      message.warning('Нет активной смены для загрузки отчета')
-      return
-    }
-
-    try {
-      await loadPaymentStats(activeShift.id)
-      message.success('Отчет по типам оплаты загружен')
-    } catch {
-      showError('Не удалось загрузить статистику по типам оплаты')
-    }
-  }
+  }, [loadShifts, showError])
 
   const handleOpenOrderById = (): void => {
     const normalizedOrderId = searchOrderId.trim()
@@ -158,7 +130,7 @@ export function DashboardPage() {
           <Typography.Text>
             Текущая смена:{' '}
             {activeShift ? (
-              <Button type="link" style={{ paddingInline: 0 }} onClick={() => void handleLoadPaymentStatsForShift()}>
+              <Button type="link" style={{ paddingInline: 0 }} onClick={() => navigate('/shifts/payment-report')}>
                 <Tag color="processing">Активна с {dayjs(activeShift.startedAt).format('DD.MM.YYYY HH:mm')}</Tag>
               </Button>
             ) : (
@@ -183,59 +155,6 @@ export function DashboardPage() {
           onSearch={handleOpenOrderById}
           enterButton="Открыть"
         />
-      </Card>
-
-      <Card title="Отчёт по сменам">
-        <Space direction="vertical" style={{ width: '100%' }}>
-          <Typography.Text type="secondary">
-            {activeShift
-              ? `Активная смена с ${dayjs(activeShift.startedAt).format('DD.MM.YYYY HH:mm')}`
-              : 'Активной смены нет'}
-          </Typography.Text>
-
-          <Row gutter={[12, 12]}>
-            <Col xs={12}>
-              <Card>
-                <Statistic title="Всего доставлено" value={activeShiftSummary?.deliveries ?? 0} loading={isShiftLoading} />
-              </Card>
-            </Col>
-            <Col xs={12}>
-              <Card>
-                <Statistic title="Общий заработок за смену" value={activeShiftSummary?.earnings ?? 0} suffix="₸" loading={isShiftLoading} />
-              </Card>
-            </Col>
-          </Row>
-
-          <Typography.Text strong>Статистика по типам оплаты</Typography.Text>
-          <Typography.Text type="secondary">Нажмите на текущую смену выше, чтобы загрузить отчет.</Typography.Text>
-          <Table
-            size="small"
-            pagination={false}
-            loading={isPaymentStatsLoading}
-            dataSource={paymentStats?.stats ?? []}
-            rowKey={(record) => String(record.paymentTypeId)}
-            locale={{ emptyText: 'Нет данных по типам оплаты' }}
-            columns={[
-              {
-                title: 'Тип оплаты',
-                dataIndex: 'paymentTypeName',
-                key: 'paymentTypeName',
-              },
-              {
-                title: 'Не отменено',
-                dataIndex: 'notCanceled',
-                key: 'notCanceled',
-                width: 120,
-              },
-              {
-                title: 'Отменено',
-                dataIndex: 'canceled',
-                key: 'canceled',
-                width: 120,
-              },
-            ]}
-          />
-        </Space>
       </Card>
 
       <Card title="Заказы в доставке сейчас">

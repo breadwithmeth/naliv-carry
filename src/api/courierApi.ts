@@ -5,9 +5,9 @@ import type {
   CitiesData,
   CourierLocationData,
   CourierProfileData,
-  BackendPaymentStatsData,
-  PaymentStatsData,
+  BackendShiftPaymentReportData,
   ShiftActionData,
+  ShiftPaymentReportData,
   ShiftsListData,
   SaveCourierLocationBody,
   SaveCourierLocationData,
@@ -52,51 +52,67 @@ export async function getShifts(): Promise<ShiftsListData> {
   return response.data.data
 }
 
-interface PaymentStatsQuery {
-  shiftId: string
+interface ShiftPaymentReportQuery {
+  shiftId?: string
 }
 
-export async function getPaymentStats(query: PaymentStatsQuery): Promise<PaymentStatsData> {
-  const response = await apiClient.get<ApiResponse<BackendPaymentStatsData>>('/courier/orders/payment-stats', {
-    params: {
-      shift_id: query.shiftId,
-    },
+export async function getShiftPaymentReport(query: ShiftPaymentReportQuery = {}): Promise<ShiftPaymentReportData> {
+  const response = await apiClient.get<ApiResponse<BackendShiftPaymentReportData>>('/courier/shifts/payment-report', {
+    params: query.shiftId
+      ? {
+          shift_id: query.shiftId,
+        }
+      : undefined,
   })
 
   const source = response.data.data
 
   return {
     courierId: source.courier_id,
-    shift: source.shift
-      ? {
-          id: source.shift.id,
-          startedAt: source.shift.started_at,
-          endedAt: source.shift.ended_at,
-          status: source.shift.status,
-        }
-      : null,
-    period: {
-      startDate: source.period.start_date,
-      endDate: source.period.end_date,
+    employeeId: source.employeeId,
+    requestedShiftId: source.requested_shift_id,
+    generatedAt: source.generated_at,
+    summary: {
+      totalShifts: source.summary.total_shifts,
+      closedShifts: source.summary.closed_shifts,
+      unfinishedShifts: source.summary.unfinished_shifts,
+      totalOrders: source.summary.total_orders,
+      totalAmount: source.summary.total_amount,
     },
-    stats: source.stats.map((item) => ({
-      paymentTypeId: item.payment_type_id,
-      paymentTypeName: item.payment_type_name,
-      canceled: item.canceled,
-      notCanceled: item.not_canceled,
-      canceledAmount: item.canceled_amount ?? 0,
-      notCanceledAmount: item.not_canceled_amount ?? 0,
-      totalAmount: item.total_amount ?? 0,
+    shifts: source.shifts.map((shiftReport) => ({
+      shift: {
+        id: shiftReport.shift.id,
+        startedAt: shiftReport.shift.started_at,
+        endedAt: shiftReport.shift.ended_at,
+        status: shiftReport.shift.status,
+        isClosed: shiftReport.shift.is_closed,
+      },
+      period: {
+        startDate: shiftReport.period.start_date,
+        endDate: shiftReport.period.end_date,
+      },
+      paymentTypes: shiftReport.payment_types.map((item) => ({
+        paymentTypeId: item.payment_type_id,
+        paymentTypeName: item.payment_type_name,
+        canceled: item.canceled,
+        notCanceled: item.not_canceled,
+        canceledAmount: item.canceled_amount ?? 0,
+        notCanceledAmount: item.not_canceled_amount ?? 0,
+        totalAmount: item.total_amount ?? 0,
+      })),
+      orders: shiftReport.orders.map((item) => ({
+        orderId: item.order_id,
+        paymentTypeId: item.payment_type_id,
+        paymentTypeName: item.payment_type_name,
+        isCanceled: item.is_canceled,
+        amountTotal: item.amount_total ?? 0,
+        deliveryServiceFee: item.delivery_service_fee ?? 0,
+        deliveryCost: item.delivery_cost ?? 0,
+      })),
+      totals: {
+        ordersCount: shiftReport.totals.orders_count,
+        totalAmount: shiftReport.totals.total_amount,
+      },
     })),
-    orders: (source.orders ?? []).map((item) => ({
-      orderId: item.order_id,
-      paymentTypeId: item.payment_type_id,
-      paymentTypeName: item.payment_type_name,
-      isCanceled: item.is_canceled,
-      amountTotal: item.amount_total ?? 0,
-      amountBeforeDelivery: item.amount_before_delivery ?? 0,
-      deliveryPrice: item.delivery_price ?? 0,
-    })),
-    totalPaymentTypes: source.total_payment_types,
   }
 }

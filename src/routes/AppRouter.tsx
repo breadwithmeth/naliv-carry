@@ -76,7 +76,7 @@ export function AppRouter() {
           }
         />
         <Route
-          path="/shifts/payment-stats"
+          path="/shifts/payment-report"
           element={
             <ProtectedRoute>
               <CourierLayout>
@@ -85,6 +85,7 @@ export function AppRouter() {
             </ProtectedRoute>
           }
         />
+        <Route path="/shifts/payment-stats" element={<Navigate to="/shifts/payment-report" replace />} />
         <Route
           path="/profile"
           element={

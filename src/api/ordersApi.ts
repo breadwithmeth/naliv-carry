@@ -152,6 +152,7 @@ export async function getOrderById(orderId: string): Promise<Order> {
     ? {
         itemsTotal: sourceOrder.cost_summary.items_total ?? sourceOrder.cost_summary.products_total,
         deliveryPrice: sourceOrder.cost_summary.delivery_price,
+        deliveryServiceFee: sourceOrder.cost_summary.delivery_service_fee,
         serviceFee: sourceOrder.cost_summary.service_fee,
         bonusUsed: sourceOrder.cost_summary.bonus_used,
         subtotal: sourceOrder.cost_summary.subtotal,

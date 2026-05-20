@@ -1,6 +1,6 @@
-import { Button, Card, Descriptions, Form, Input, Space, Typography, message } from 'antd'
-import { CopyOutlined } from '@ant-design/icons'
-import { useEffect } from 'react'
+import { Button, Card, Form, Input, Space, Typography, message } from 'antd'
+import { CopyOutlined, LogoutOutlined, UserOutlined } from '@ant-design/icons'
+import { useEffect, type ReactNode } from 'react'
 import { changeCourierPassword } from '../api/courierApi'
 import { useSnackbar } from '../hooks/useSnackbar'
 import { useAuthStore } from '../store/authStore'
@@ -64,26 +64,28 @@ export function ProfilePage() {
         Профиль курьера
       </Typography.Title>
       <Card>
-        <Descriptions column={1} size="small">
-          <Descriptions.Item label="Workforce ID">
-            <Space size="small">
-              <Typography.Text>{workforceId}</Typography.Text>
-              <Button
-                className="touch-action"
-                size="small"
-                icon={<CopyOutlined />}
-                onClick={() => void handleCopyWorkforceId()}
-                disabled={workforceId === '-'}
-              >
-                Копировать
-              </Button>
+        <Space direction="vertical" size={12} style={{ width: '100%' }}>
+          <Space align="center" size={12}>
+            <UserOutlined style={{ fontSize: 28 }} />
+            <Space direction="vertical" size={0}>
+              <Typography.Text strong>{profile?.name ?? user?.name ?? '-'}</Typography.Text>
+              <Typography.Text type="secondary">{profile?.login ?? user?.phoneOrEmail ?? '-'}</Typography.Text>
             </Space>
-          </Descriptions.Item>
-          <Descriptions.Item label="Имя">{profile?.name ?? user?.name ?? '-'}</Descriptions.Item>
-          <Descriptions.Item label="Логин">{profile?.login ?? user?.phoneOrEmail ?? '-'}</Descriptions.Item>
-          <Descriptions.Item label="Уровень доступа">{profile?.access_level ?? '-'}</Descriptions.Item>
-          <Descriptions.Item label="Устройство">{deviceInfo}</Descriptions.Item>
-        </Descriptions>
+          </Space>
+
+          <ProfileField label="Workforce ID" value={workforceId}>
+            <Button
+              className="touch-action profile-field__action"
+              icon={<CopyOutlined />}
+              onClick={() => void handleCopyWorkforceId()}
+              disabled={workforceId === '-'}
+            >
+              Копировать
+            </Button>
+          </ProfileField>
+          <ProfileField label="Уровень доступа" value={profile?.access_level ?? '-'} />
+          <ProfileField label="Устройство" value={deviceInfo} />
+        </Space>
       </Card>
       <Card title="Смена пароля">
         <Form layout="vertical" onFinish={handleChangePassword} requiredMark={false}>
@@ -109,7 +111,7 @@ export function ProfilePage() {
             <Input.Password className="touch-action" />
           </Form.Item>
 
-          <Button type="primary" htmlType="submit" className="touch-action">
+          <Button type="primary" htmlType="submit" className="touch-action" block>
             Изменить пароль
           </Button>
         </Form>
@@ -117,6 +119,8 @@ export function ProfilePage() {
       <Button
         danger
         className="touch-action"
+        icon={<LogoutOutlined />}
+        block
         onClick={async () => {
           await logout()
         }}
@@ -124,5 +128,25 @@ export function ProfilePage() {
         Выйти
       </Button>
     </Space>
+  )
+}
+
+interface ProfileFieldProps {
+  label: string
+  value: string
+  children?: ReactNode
+}
+
+function ProfileField({ label, value, children }: ProfileFieldProps) {
+  return (
+    <div className="profile-field">
+      <div className="profile-field__content">
+        <Typography.Text type="secondary">{label}</Typography.Text>
+        <Typography.Text strong copyable={false}>
+          {value}
+        </Typography.Text>
+      </div>
+      {children}
+    </div>
   )
 }

@@ -6,6 +6,8 @@ import { useCourierStore } from '../store/courierStore'
 import { useOrdersStore } from '../store/ordersStore'
 import { build2gisNavigationUrl } from '../utils/navigation'
 
+const PAGE_OPENED_AT_MS = Date.now()
+
 export function MapPage() {
   const orders = useOrdersStore((state) => state.orders)
   const cities = useCourierStore((state) => state.cities)
@@ -16,7 +18,7 @@ export function MapPage() {
   const { showError } = useSnackbar()
 
   const lastLocationDate = location?.updated_at ? new Date(location.updated_at) : null
-  const locationAgeMs = lastLocationDate ? Date.now() - lastLocationDate.getTime() : null
+  const locationAgeMs = lastLocationDate ? PAGE_OPENED_AT_MS - lastLocationDate.getTime() : null
   const isLocationStale =
     !location || !lastLocationDate || Number.isNaN(lastLocationDate.getTime()) || (locationAgeMs ?? 0) > 6 * 60 * 60 * 1000
 
