@@ -1,5 +1,6 @@
 import Keycloak from 'keycloak-js'
 import type { AuthUser } from '../types/models'
+import { clearTokens, getStoredTokens, setTokens } from './tokenStorage'
 
 const keycloak = new Keycloak({
   url: import.meta.env.VITE_KEYCLOAK_URL ?? 'https://sec.naliv.kz',
@@ -68,8 +69,26 @@ function cleanupKeycloakQueryParams(): void {
   window.history.replaceState(window.history.state, '', nextUrl)
 }
 
+function hasKeycloakQueryParams(): boolean {
+  const params = new URLSearchParams(window.location.search)
+  return KEYCLOAK_CALLBACK_PARAMS.some((param) => params.has(param))
+}
+
 function buildAppUrl(path: string): string {
   return useHashRouter ? `${window.location.origin}/#${path}` : `${window.location.origin}${path}`
+}
+
+function persistCurrentTokens(): void {
+  if (!keycloak.token || !keycloak.refreshToken) {
+    clearTokens()
+    return
+  }
+
+  setTokens({
+    accessToken: keycloak.token,
+    refreshToken: keycloak.refreshToken,
+    idToken: keycloak.idToken,
+  })
 }
 
 export async function initKeycloak(onLoad: 'check-sso' | 'login-required' = 'check-sso'): Promise<boolean> {
@@ -85,6 +104,7 @@ export async function initKeycloak(onLoad: 'check-sso' | 'login-required' = 'che
       checkLoginIframe: false,
       onLoad,
     }
+    const storedTokens = hasKeycloakQueryParams() ? null : getStoredTokens()
 
     if (useHashRouter) {
       // Query callback mode avoids collisions with hash-based client routing.
@@ -95,15 +115,29 @@ export async function initKeycloak(onLoad: 'check-sso' | 'login-required' = 'che
       initOptions.silentCheckSsoRedirectUri = `${window.location.origin}/silent-check-sso.html`
     }
 
+    if (storedTokens) {
+      initOptions.token = storedTokens.accessToken
+      initOptions.refreshToken = storedTokens.refreshToken
+      initOptions.idToken = storedTokens.idToken
+    }
+
     initPromise = keycloak
       .init(initOptions)
       .then((authenticated) => {
         initialized = true
         cleanupKeycloakQueryParams()
+
+        if (authenticated) {
+          persistCurrentTokens()
+        } else {
+          clearTokens()
+        }
+
         return authenticated
       })
       .catch((error) => {
         cleanupKeycloakQueryParams()
+        clearTokens()
         throw error
       })
       .finally(() => {
@@ -120,6 +154,7 @@ export async function keycloakLogin(): Promise<void> {
 }
 
 export async function keycloakLogout(): Promise<void> {
+  clearTokens()
   await keycloak.logout({ redirectUri: buildAppUrl('/login') })
 }
 
@@ -129,10 +164,18 @@ export async function updateKeycloakToken(minValidity = 30): Promise<string | nu
   }
 
   if (!keycloak.authenticated) {
+    clearTokens()
     return null
   }
 
-  await keycloak.updateToken(minValidity)
+  try {
+    await keycloak.updateToken(minValidity)
+  } catch (error) {
+    clearTokens()
+    throw error
+  }
+
+  persistCurrentTokens()
   return keycloak.token ?? null
 }
 
