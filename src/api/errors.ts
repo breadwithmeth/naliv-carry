@@ -4,6 +4,7 @@ interface ApiErrorBody {
   error?: {
     message?: unknown
   }
+  error_description?: unknown
   message?: unknown
 }
 
@@ -28,6 +29,7 @@ export function getApiErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof AxiosError && isApiErrorBody(error.response?.data)) {
     return (
       normalizeMessage(error.response.data.error?.message) ??
+      normalizeMessage(error.response.data.error_description) ??
       normalizeMessage(error.response.data.message) ??
       fallback
     )
@@ -35,6 +37,15 @@ export function getApiErrorMessage(error: unknown, fallback: string): string {
 
   if (error instanceof Error && error.message.trim()) {
     return error.message
+  }
+
+  if (isApiErrorBody(error)) {
+    return (
+      normalizeMessage(error.error?.message) ??
+      normalizeMessage(error.error_description) ??
+      normalizeMessage(error.message) ??
+      fallback
+    )
   }
 
   return fallback

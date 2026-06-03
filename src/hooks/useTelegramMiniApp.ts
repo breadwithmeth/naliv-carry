@@ -24,6 +24,8 @@ export function useTelegramMiniApp(): void {
       return
     }
 
+    document.documentElement.dataset.telegramMiniApp = 'true'
+
     const handleViewportChanged = () => {
       applyTelegramViewport(webApp)
     }
@@ -45,6 +47,8 @@ export function useTelegramMiniApp(): void {
     }
 
     return () => {
+      delete document.documentElement.dataset.telegramMiniApp
+
       try {
         webApp.offEvent?.('viewportChanged', handleViewportChanged)
       } catch {

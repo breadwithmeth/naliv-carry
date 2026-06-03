@@ -1,6 +1,7 @@
 import { SafetyCertificateOutlined } from '@ant-design/icons'
 import { Button, message } from 'antd'
 import { useNavigate } from 'react-router-dom'
+import { getApiErrorMessage } from '../../api/errors'
 import { useAuthStore } from '../../store/authStore'
 import { useSnackbar } from '../../hooks/useSnackbar'
 
@@ -15,8 +16,10 @@ export function LoginCard() {
       await login()
       message.success('Вход выполнен')
       navigate('/dashboard', { replace: true })
-    } catch {
-      showError('Не удалось выполнить вход')
+    } catch (error) {
+      showError(getApiErrorMessage(error, 'Попробуйте войти еще раз.'), {
+        title: 'Не удалось выполнить вход',
+      })
     }
   }
 

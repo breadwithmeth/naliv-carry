@@ -19,6 +19,7 @@
   --app-warning: #f5a623;
   --app-header-height: 60px;
   --app-bottom-nav-height: 70px;
+  --app-telegram-top-offset: 0px;
 }
 
 :root[data-theme='light'] {
@@ -31,6 +32,10 @@
   --app-border: #d4d4d4;
   --app-card: #ffffff;
   --app-accent-soft: rgba(255, 61, 0, 0.12);
+}
+
+:root[data-telegram-mini-app='true'] {
+  --app-telegram-top-offset: max(12px, var(--tg-content-safe-area-inset-top, 0px));
 }
 
 * {
@@ -93,8 +98,8 @@ a {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  height: var(--app-header-height);
-  padding: 10px 14px;
+  height: calc(var(--app-header-height) + var(--app-telegram-top-offset));
+  padding: calc(10px + var(--app-telegram-top-offset)) 14px 10px;
   border-bottom: 1px solid var(--app-border);
   background: color-mix(in srgb, var(--app-bg) 94%, transparent);
   backdrop-filter: blur(18px);
