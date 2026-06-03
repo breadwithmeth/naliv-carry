@@ -15,6 +15,6 @@ interface Props {
 }
 
 export function StatusTag({ status }: Props) {
-  const config = statusConfig[status]
+  const config = statusConfig[status] ?? { label: 'Статус неизвестен' }
   return <Tag className={`status-tag status-tag--${status}`}>{config.label}</Tag>
 }

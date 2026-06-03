@@ -1,6 +1,5 @@
 /// <reference lib="webworker" />
 
-import { clientsClaim } from 'workbox-core'
 import { BackgroundSyncPlugin } from 'workbox-background-sync'
 import { ExpirationPlugin } from 'workbox-expiration'
 import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching'
@@ -9,8 +8,6 @@ import { NetworkFirst, NetworkOnly, StaleWhileRevalidate } from 'workbox-strateg
 
 declare let self: ServiceWorkerGlobalScope
 
-autoSkipWaiting()
-clientsClaim()
 cleanupOutdatedCaches()
 precacheAndRoute(self.__WB_MANIFEST)
 
@@ -81,7 +78,3 @@ self.addEventListener('message', (event) => {
     self.skipWaiting()
   }
 })
-
-function autoSkipWaiting(): void {
-  self.addEventListener('install', () => self.skipWaiting())
-}

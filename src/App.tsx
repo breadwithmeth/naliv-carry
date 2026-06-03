@@ -1,5 +1,6 @@
 import { ConfigProvider, App as AntdApp, theme } from 'antd'
 import { useEffect } from 'react'
+import { AppErrorBoundary } from './components/common/AppErrorBoundary'
 import { AppRouter } from './routes/AppRouter'
 import { useThemeStore } from './store/themeStore'
 
@@ -63,7 +64,9 @@ function App() {
       }}
     >
       <AntdApp>
-        <AppRouter />
+        <AppErrorBoundary>
+          <AppRouter />
+        </AppErrorBoundary>
       </AntdApp>
     </ConfigProvider>
   )
