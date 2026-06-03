@@ -11,37 +11,46 @@ interface Props {
 }
 
 export function OrderCard({ order, onTakeOrder }: Props) {
+  const lat = order.deliveryAddressCoordinates?.lat ?? order.latitude ?? 0
+  const lon = order.deliveryAddressCoordinates?.lon ?? order.longitude ?? 0
+  const point = order.businessName
+    ? `${order.businessName}${order.businessAddress ? `, ${order.businessAddress}` : ''}`
+    : undefined
+
   return (
     <Card
-      title={order.customerName}
-      extra={<StatusTag status={order.status} />}
-      styles={{ body: { display: 'flex', flexDirection: 'column', gap: 12 } }}
+      className="order-card"
     >
-      {(order.businessName || order.businessAddress) && (
-        <Typography.Text type="secondary">
-          {`Точка: ${order.businessName ?? '-'}${order.businessAddress ? `, ${order.businessAddress}` : ''}`}
-        </Typography.Text>
-      )}
-      <Typography.Text type="secondary">{order.address}</Typography.Text>
+      <div className="order-card__top">
+        <div>
+          <h2 className="order-card__title">{order.customerName}</h2>
+          <Typography.Text className="eyebrow">#{order.id}</Typography.Text>
+        </div>
+        <StatusTag status={order.status} />
+      </div>
+
+      <p className="order-card__address">{order.address}</p>
+      {point ? <p className="order-card__address">Точка: {point}</p> : null}
+
       <Space wrap>
-        <Button className="touch-action" href={`tel:${order.customerPhone}`} icon={<PhoneOutlined />}>
-          Позвонить
+        <Link to={`/orders/${order.id}`}>
+          <Button className="touch-action" type="primary">
+            Открыть
+          </Button>
+        </Link>
+        <Button className="touch-action secondary-action" href={`tel:${order.customerPhone}`} icon={<PhoneOutlined />}>
+          Звонок
         </Button>
         <Button
-          className="touch-action"
-          href={build2gisNavigationUrl(order.latitude, order.longitude)}
+          className="touch-action secondary-action"
+          href={build2gisNavigationUrl(lat, lon)}
           target="_blank"
           icon={<EnvironmentOutlined />}
         >
-          Навигация
+          Маршрут
         </Button>
-        <Link to={`/orders/${order.id}`}>
-          <Button className="touch-action" type="primary">
-            Подробнее
-          </Button>
-        </Link>
         {onTakeOrder && (
-          <Button className="touch-action" onClick={() => onTakeOrder(order.id)}>
+          <Button className="touch-action secondary-action" onClick={() => onTakeOrder(order.id)}>
             Взять в доставку
           </Button>
         )}

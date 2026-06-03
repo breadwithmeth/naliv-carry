@@ -1,26 +1,38 @@
 import {
-  Card,
-  Descriptions,
-  Divider,
-  List,
-  Space,
-  Typography,
+  Alert,
   Button,
+  Collapse,
+  Empty,
+  List,
   message,
   Popconfirm,
+  Space,
   Spin,
 } from 'antd'
 import { EnvironmentOutlined, PhoneOutlined, WhatsAppOutlined } from '@ant-design/icons'
 import { useEffect, useMemo, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { getApiErrorMessage } from '../api/errors'
 import { StatusTag } from '../components/common/StatusTag'
 import { useSnackbar } from '../hooks/useSnackbar'
 import { useOrdersStore } from '../store/ordersStore'
 import { build2gisNavigationUrl } from '../utils/navigation'
 
+function formatMoney(value: number | null | undefined): string {
+  return typeof value === 'number' && Number.isFinite(value) ? `${value.toLocaleString('ru-RU')} ₸` : '-'
+}
+
+function formatValue(value: string | number | null | undefined): string {
+  if (value === null || value === undefined || value === '') {
+    return '-'
+  }
+
+  return String(value)
+}
+
 export function OrderDetailsPage() {
   const { orderId } = useParams()
+  const navigate = useNavigate()
   const fetchOrderById = useOrdersStore((state) => state.fetchOrderById)
   const takeOrder = useOrdersStore((state) => state.takeOrder)
   const deliverOrder = useOrdersStore((state) => state.deliverOrder)
@@ -29,6 +41,7 @@ export function OrderDetailsPage() {
   const selectedOrder = useOrdersStore((state) => state.selectedOrder)
   const [isBusy, setIsBusy] = useState(() => Boolean(orderId))
   const [isTakingOrder, setIsTakingOrder] = useState(false)
+  const [isDeliveringOrder, setIsDeliveringOrder] = useState(false)
   const [cancelingAction, setCancelingAction] = useState<'under_21' | 'client_rejected' | null>(null)
   const { showError } = useSnackbar()
 
@@ -85,15 +98,21 @@ export function OrderDetailsPage() {
   }
 
   const onDeliverOrder = async () => {
-    if (!selectedOrder) {
+    if (!selectedOrder || isDeliveringOrder) {
       return
     }
 
+    const selectedOrderId = selectedOrder.id
+    setIsDeliveringOrder(true)
+
     try {
-      await deliverOrder(selectedOrder.id)
+      await deliverOrder(selectedOrderId)
+      await fetchOrderById(selectedOrderId)
       message.success('Доставка подтверждена')
     } catch (error) {
       showError(getApiErrorMessage(error, 'Не удалось подтвердить доставку'))
+    } finally {
+      setIsDeliveringOrder(false)
     }
   }
 
@@ -136,11 +155,25 @@ export function OrderDetailsPage() {
   }
 
   if (orderId && isBusy) {
-    return <Spin />
+    return (
+      <div className="empty-state">
+        <Spin />
+        <p className="empty-state__text">Открываем заказ</p>
+      </div>
+    )
   }
 
-  if (!selectedOrder) {
-    return <Typography.Text>Заказ не найден</Typography.Text>
+  if (!selectedOrder || (orderId && selectedOrder.id !== orderId)) {
+    return (
+      <div className="empty-state">
+        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={null} />
+        <h1 className="empty-state__title">Заказ не найден</h1>
+        <p className="empty-state__text">Проверьте номер заказа или вернитесь к списку доставок.</p>
+        <Button className="touch-action secondary-action" onClick={() => navigate('/orders')}>
+          К доставкам
+        </Button>
+      </div>
+    )
   }
 
   const isOrderInDelivery = selectedOrder.statusCode === 3 || selectedOrder.status === 'on_the_way'
@@ -154,172 +187,235 @@ export function OrderDetailsPage() {
     selectedOrder.status === 'canceled_under_21' ||
     selectedOrder.status === 'canceled_client_rejected'
   const isCancelDisabled = !isOrderInDelivery || isOrderFinished || Boolean(cancelingAction)
+  const nextStepTitle = isOrderFinished
+    ? 'Заказ завершен'
+    : isOrderInDelivery
+      ? 'Передайте заказ клиенту'
+      : 'Возьмите заказ в работу'
+  const nextStepText = isOrderFinished
+    ? 'Действия по доставке закрыты. Подробности доступны ниже.'
+    : isOrderInDelivery
+      ? 'Когда клиент примет заказ, подтвердите выдачу.'
+      : 'Сначала возьмите заказ, затем постройте маршрут и свяжитесь с клиентом.'
+  const primaryActionLabel = isOrderInDelivery ? 'Выдать заказ' : 'Взять в доставку'
+  const addressDetails = selectedOrder.deliveryAddressDetails
+  const point = selectedOrder.businessName
+    ? `${selectedOrder.businessName}${selectedOrder.businessAddress ? `, ${selectedOrder.businessAddress}` : ''}`
+    : selectedOrder.businessAddress
+  const orderItems = selectedOrder.items ?? []
+  const statusHistory = selectedOrder.statusHistory ?? []
 
   return (
-    <Space direction="vertical" style={{ width: '100%' }}>
-      <Typography.Title level={4} style={{ margin: 0 }}>
-        Заказ №{selectedOrder.id}
-      </Typography.Title>
+    <div className="screen">
+      <section className="screen-hero screen-hero--compact">
+        <span className="eyebrow">Заказ #{selectedOrder.id}</span>
+        <h1 className="screen-title screen-title--sm">{selectedOrder.customerName}</h1>
+        <p className="screen-copy">{selectedOrder.address}</p>
+      </section>
 
-      <Card extra={<StatusTag status={selectedOrder.status} />}>
-        <Descriptions column={1} size="small" bordered>
-          <Descriptions.Item label="ID заказа">{selectedOrder.id}</Descriptions.Item>
-          <Descriptions.Item label="UUID заказа">{selectedOrder.orderUuid ?? '-'}</Descriptions.Item>
-          <Descriptions.Item label="Клиент">{selectedOrder.customerName}</Descriptions.Item>
-          <Descriptions.Item label="Телефон">{selectedOrder.customerPhone}</Descriptions.Item>
-          <Descriptions.Item label="Точка">
-            {selectedOrder.businessName ?? '-'}
-            {selectedOrder.businessAddress ? `, ${selectedOrder.businessAddress}` : ''}
-          </Descriptions.Item>
-          <Descriptions.Item label="Название адреса">{selectedOrder.deliveryAddressName ?? '-'}</Descriptions.Item>
-          <Descriptions.Item label="Адрес доставки">{selectedOrder.address}</Descriptions.Item>
-          <Descriptions.Item label="Оплата">{selectedOrder.paymentTypeName ?? '-'}</Descriptions.Item>
-          <Descriptions.Item label="Статус">{selectedOrder.statusName ?? selectedOrder.status}</Descriptions.Item>
-          <Descriptions.Item label="Кол-во позиций">{selectedOrder.itemsCount ?? selectedOrder.items?.length ?? '-'}</Descriptions.Item>
-          <Descriptions.Item label="Стоимость доставки">{selectedOrder.deliveryPrice ?? '-'}</Descriptions.Item>
-          <Descriptions.Item label="Итоговая стоимость">{selectedOrder.totalCost ?? '-'}</Descriptions.Item>
-          <Descriptions.Item label="Бонус">{selectedOrder.bonus ?? '-'}</Descriptions.Item>
-          <Descriptions.Item label="Создан">{selectedOrder.createdAt ?? '-'}</Descriptions.Item>
-          <Descriptions.Item label="Дополнительно">{selectedOrder.extra ?? '-'}</Descriptions.Item>
-          <Descriptions.Item label="Комментарий">{selectedOrder.notes ?? '-'}</Descriptions.Item>
-        </Descriptions>
+      <section className="panel panel--accent">
+        <div className="panel__body">
+          <div className="panel__header">
+            <div>
+              <h2 className="panel__title">{nextStepTitle}</h2>
+              <p className="panel__text">{nextStepText}</p>
+            </div>
+            <StatusTag status={selectedOrder.status} />
+          </div>
 
-        <Divider />
-
-        <Descriptions column={1} size="small" bordered>
-          <Descriptions.Item label="Квартира">
-            {selectedOrder.deliveryAddressDetails?.apartment || '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label="Подъезд">
-            {selectedOrder.deliveryAddressDetails?.entrance || '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label="Этаж">{selectedOrder.deliveryAddressDetails?.floor || '-'}</Descriptions.Item>
-          <Descriptions.Item label="Комментарий">
-            {selectedOrder.deliveryAddressDetails?.comment || '-'}
-          </Descriptions.Item>
-        </Descriptions>
-      </Card>
-
-      <Card title="Действия">
-        <Space wrap>
-          <Button
-            className="touch-action"
-            href={`tel:${selectedOrder.customerPhone}`}
-            icon={<PhoneOutlined />}
-          >
-            Позвонить клиенту
-          </Button>
-          <Button className="touch-action" href={mapUrl} target="_blank" icon={<EnvironmentOutlined />}>
-            Открыть навигацию
-          </Button>
-          <Button className="touch-action" href={whatsappUrl} target="_blank" icon={<WhatsAppOutlined />}>
-            Написать в WhatsApp
-          </Button>
-        </Space>
-      </Card>
-
-      <Card title="История статусов">
-        <List
-          dataSource={selectedOrder.statusHistory ?? []}
-          locale={{ emptyText: 'Нет истории статусов' }}
-          renderItem={(item) => (
-            <List.Item>
-              <Space direction="vertical" size={0}>
-                <Typography.Text>{item.statusName}</Typography.Text>
-                <Typography.Text type="secondary">{item.timestamp ?? '-'}</Typography.Text>
-              </Space>
-            </List.Item>
-          )}
-        />
-      </Card>
-
-      <Card title="Позиции заказа">
-        <List
-          dataSource={selectedOrder.items ?? []}
-          locale={{ emptyText: 'Нет позиций' }}
-          renderItem={(item) => (
-            <List.Item>
-              <Typography.Text strong>
-                {item.name ?? '-'} x {item.amount ?? 1}
-              </Typography.Text>
-            </List.Item>
-          )}
-        />
-      </Card>
-
-      <Card title="Сводка по стоимости">
-        <Descriptions column={1} size="small" bordered>
-          <Descriptions.Item label="Сумма товаров">{selectedOrder.costSummary?.itemsTotal ?? '-'}</Descriptions.Item>
-          <Descriptions.Item label="Стоимость доставки">
-            {selectedOrder.costSummary?.deliveryPrice ?? '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label="Сервисный сбор доставки">
-            {selectedOrder.costSummary?.deliveryServiceFee ?? '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label="Сервисный сбор">{selectedOrder.costSummary?.serviceFee ?? '-'}</Descriptions.Item>
-          <Descriptions.Item label="Списано бонусов">{selectedOrder.costSummary?.bonusUsed ?? '-'}</Descriptions.Item>
-          <Descriptions.Item label="Промежуточный итог">{selectedOrder.costSummary?.subtotal ?? '-'}</Descriptions.Item>
-          <Descriptions.Item label="Итого">{selectedOrder.costSummary?.totalSum ?? '-'}</Descriptions.Item>
-        </Descriptions>
-      </Card>
-
-      <Card title="Действия доставки">
-        <Space wrap>
-          <Button
-            className="touch-action"
-            type="primary"
-            onClick={onTakeOrder}
-            loading={isTakingOrder}
-            disabled={
-              isTakingOrder ||
-              isOrderFinished ||
-              selectedOrder.statusCode === 3 ||
-              selectedOrder.status === 'on_the_way'
-            }
-          >
-            Взять в доставку
-          </Button>
-          <Button
-            className="touch-action"
-            onClick={onDeliverOrder}
-            disabled={!isOrderInDelivery || isOrderFinished}
-          >
-            Выдать заказ
-          </Button>
-          <Popconfirm
-            title="Отменить заказ?"
-            description="Причина: клиенту нет 21 года"
-            okText="Отменить"
-            cancelText="Назад"
-            onConfirm={() => void onCancelUnder21()}
-          >
+          {!isOrderFinished ? (
             <Button
-              className="touch-action"
-              danger
-              loading={cancelingAction === 'under_21'}
-              disabled={isCancelDisabled}
+              block
+              type="primary"
+              className="touch-action primary-action"
+              onClick={isOrderInDelivery ? onDeliverOrder : onTakeOrder}
+              loading={isOrderInDelivery ? isDeliveringOrder : isTakingOrder}
+              disabled={isDeliveringOrder || isTakingOrder}
             >
-              Клиенту нет 21 года
+              {primaryActionLabel}
             </Button>
-          </Popconfirm>
-          <Popconfirm
-            title="Отменить заказ?"
-            description="Причина: клиент не принимает заказ"
-            okText="Отменить"
-            cancelText="Назад"
-            onConfirm={() => void onCancelClientRejected()}
-          >
+          ) : null}
+
+          <Space wrap>
             <Button
-              className="touch-action"
-              danger
-              loading={cancelingAction === 'client_rejected'}
-              disabled={isCancelDisabled}
+              className="touch-action secondary-action"
+              href={mapUrl}
+              target="_blank"
+              icon={<EnvironmentOutlined />}
             >
-              Клиент не принимает
+              Маршрут
             </Button>
-          </Popconfirm>
-        </Space>
-      </Card>
-    </Space>
+            <Button
+              className="touch-action secondary-action"
+              href={`tel:${selectedOrder.customerPhone}`}
+              icon={<PhoneOutlined />}
+            >
+              Позвонить
+            </Button>
+            <Button
+              className="touch-action secondary-action"
+              href={whatsappUrl}
+              target="_blank"
+              icon={<WhatsAppOutlined />}
+            >
+              WhatsApp
+            </Button>
+          </Space>
+        </div>
+      </section>
+
+      {(selectedOrder.notes || selectedOrder.extra || addressDetails?.comment) ? (
+        <Alert
+          type="info"
+          showIcon
+          message="Комментарий к доставке"
+          description={selectedOrder.notes || selectedOrder.extra || addressDetails?.comment}
+        />
+      ) : null}
+
+      <section className="panel">
+        <div className="panel__body">
+          <h2 className="panel__title">Главное</h2>
+          <div className="info-list">
+            <InfoRow label="Телефон" value={selectedOrder.customerPhone} />
+            <InfoRow label="Адрес" value={selectedOrder.address} />
+            <InfoRow label="Квартира" value={addressDetails?.apartment} />
+            <InfoRow label="Подъезд" value={addressDetails?.entrance} />
+            <InfoRow label="Этаж" value={addressDetails?.floor} />
+            <InfoRow label="Оплата" value={selectedOrder.paymentTypeName} />
+            <InfoRow label="Итого" value={formatMoney(selectedOrder.totalCost)} />
+            <InfoRow label="Точка" value={point} />
+          </div>
+        </div>
+      </section>
+
+      <Collapse
+        items={[
+          {
+            key: 'items',
+            label: 'Позиции заказа',
+            children: (
+              <List
+                dataSource={orderItems}
+                locale={{ emptyText: 'Нет позиций' }}
+                renderItem={(item) => (
+                  <List.Item>
+                    <div>
+                      <strong>{formatValue(item.name)}</strong>
+                      <p className="panel__text">
+                        {item.amount ?? 1} шт. · {formatMoney(item.totalCost ?? item.price)}
+                      </p>
+                    </div>
+                  </List.Item>
+                )}
+              />
+            ),
+          },
+          {
+            key: 'cost',
+            label: 'Стоимость',
+            children: (
+              <div className="info-list">
+                <InfoRow label="Товары" value={formatMoney(selectedOrder.costSummary?.itemsTotal)} />
+                <InfoRow label="Доставка" value={formatMoney(selectedOrder.costSummary?.deliveryPrice ?? selectedOrder.deliveryPrice)} />
+                <InfoRow label="Сервис доставки" value={formatMoney(selectedOrder.costSummary?.deliveryServiceFee)} />
+                <InfoRow label="Сервис" value={formatMoney(selectedOrder.costSummary?.serviceFee)} />
+                <InfoRow label="Бонусы" value={formatMoney(selectedOrder.costSummary?.bonusUsed ?? selectedOrder.bonus)} />
+                <InfoRow label="Итого" value={formatMoney(selectedOrder.costSummary?.totalSum ?? selectedOrder.totalCost)} />
+              </div>
+            ),
+          },
+          {
+            key: 'status',
+            label: 'История статусов',
+            children: (
+              <List
+                dataSource={statusHistory}
+                locale={{ emptyText: 'Нет истории статусов' }}
+                renderItem={(item) => (
+                  <List.Item>
+                    <div>
+                      <strong>{item.statusName}</strong>
+                      <p className="panel__text">{item.timestamp ?? '-'}</p>
+                    </div>
+                  </List.Item>
+                )}
+              />
+            ),
+          },
+          {
+            key: 'system',
+            label: 'Системные данные',
+            children: (
+              <div className="info-list">
+                <InfoRow label="ID" value={selectedOrder.id} />
+                <InfoRow label="UUID" value={selectedOrder.orderUuid} />
+                <InfoRow label="Адрес в системе" value={selectedOrder.deliveryAddressName} />
+                <InfoRow label="Статус" value={selectedOrder.statusName ?? selectedOrder.status} />
+                <InfoRow label="Создан" value={selectedOrder.createdAt} />
+                <InfoRow label="Позиций" value={selectedOrder.itemsCount ?? orderItems.length} />
+              </div>
+            ),
+          },
+        ]}
+      />
+
+      {!isOrderFinished ? (
+        <section className="panel">
+          <div className="panel__body">
+            <div>
+              <h2 className="panel__title">Проблема с заказом</h2>
+              <p className="panel__text">Используйте только если заказ нельзя выдать клиенту.</p>
+            </div>
+            <Space wrap>
+              <Popconfirm
+                title="Отменить заказ?"
+                description="Причина: клиенту нет 21 года"
+                okText="Отменить"
+                cancelText="Назад"
+                onConfirm={() => void onCancelUnder21()}
+              >
+                <Button
+                  className="touch-action danger-action"
+                  loading={cancelingAction === 'under_21'}
+                  disabled={isCancelDisabled}
+                >
+                  Нет 21 года
+                </Button>
+              </Popconfirm>
+              <Popconfirm
+                title="Отменить заказ?"
+                description="Причина: клиент не принимает заказ"
+                okText="Отменить"
+                cancelText="Назад"
+                onConfirm={() => void onCancelClientRejected()}
+              >
+                <Button
+                  className="touch-action danger-action"
+                  loading={cancelingAction === 'client_rejected'}
+                  disabled={isCancelDisabled}
+                >
+                  Клиент отказался
+                </Button>
+              </Popconfirm>
+            </Space>
+          </div>
+        </section>
+      ) : null}
+    </div>
+  )
+}
+
+interface InfoRowProps {
+  label: string
+  value: string | number | null | undefined
+}
+
+function InfoRow({ label, value }: InfoRowProps) {
+  return (
+    <div className="info-row">
+      <span className="info-row__label">{label}</span>
+      <span className="info-row__value">{formatValue(value)}</span>
+    </div>
   )
 }

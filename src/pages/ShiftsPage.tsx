@@ -1,4 +1,4 @@
-import { Card, Typography, Button, Space, Tag, List, message } from 'antd'
+import { Button, Empty, List, Spin, message } from 'antd'
 import dayjs from 'dayjs'
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -11,6 +11,7 @@ export function ShiftsPage() {
   const activeShift = useShiftsStore((state) => state.activeShift)
   const shiftSummaries = useShiftsStore((state) => state.summaries)
   const isShiftLoading = useShiftsStore((state) => state.isLoading)
+  const isCalculating = useShiftsStore((state) => state.isCalculating)
   const shiftsError = useShiftsStore((state) => state.errorMessage)
   const openShift = useShiftsStore((state) => state.openShift)
   const closeShift = useShiftsStore((state) => state.closeShift)
@@ -53,78 +54,105 @@ export function ShiftsPage() {
   }
 
   return (
-    <Space direction="vertical" style={{ width: '100%' }}>
-      <Typography.Title level={4} style={{ margin: 0 }}>
-        Смены
-      </Typography.Title>
-
-      <Card>
-        <Space direction="vertical" style={{ width: '100%' }}>
-          <Space wrap>
+    <div className="screen">
+      <section className="screen-hero screen-hero--compact">
+        <span className="eyebrow">Смена</span>
+        <h1 className="screen-title screen-title--sm">{activeShift ? 'Вы на линии' : 'Смена закрыта'}</h1>
+        <p className="screen-copy">
+          {activeShift
+            ? `Начали в ${dayjs(activeShift.startedAt).format('HH:mm')}. Закройте смену в конце работы.`
+            : 'Откройте смену перед первой доставкой.'}
+        </p>
+        <div className="hero-actions">
+          {activeShift ? (
             <Button
-              className="touch-action"
+              block
               type="primary"
-              loading={isShiftLoading}
-              onClick={() => void handleOpenShift()}
-              disabled={Boolean(activeShift)}
-            >
-              Открыть смену
-            </Button>
-            <Button
-              className="touch-action"
-              danger
+              className="touch-action primary-action"
               loading={isShiftLoading}
               onClick={() => void handleCloseShift()}
-              disabled={!activeShift}
             >
               Закрыть смену
             </Button>
-          </Space>
+          ) : (
+            <Button
+              block
+              type="primary"
+              className="touch-action primary-action"
+              loading={isShiftLoading}
+              onClick={() => void handleOpenShift()}
+            >
+              Открыть смену
+            </Button>
+          )}
+          {activeShift ? (
+            <Button
+              block
+              className="touch-action secondary-action"
+              onClick={() => handleOpenShiftPaymentStats(activeShift.id)}
+            >
+              Оплата текущей смены
+            </Button>
+          ) : null}
+        </div>
+      </section>
 
-          <Typography.Text>
-            Текущая смена:{' '}
-            {activeShift ? (
-              <Button
-                type="link"
-                style={{ paddingInline: 0 }}
-                onClick={() => handleOpenShiftPaymentStats(activeShift.id)}
-              >
-                <Tag color="processing">Активна с {dayjs(activeShift.startedAt).format('DD.MM.YYYY HH:mm')}</Tag>
-              </Button>
-            ) : (
-              <Tag>Нет активной смены</Tag>
-            )}
-          </Typography.Text>
+      <section className="metric-grid" aria-label="Сводка смен">
+        <div className="metric">
+          <span className="metric__label">Всего смен</span>
+          <span className="metric__value">{shifts.length}</span>
+        </div>
+        <div className="metric">
+          <span className="metric__label">Статус</span>
+          <span className="metric__value">{activeShift ? 'Идет' : 'Нет'}</span>
+        </div>
+      </section>
 
-          {shiftsError ? <Typography.Text type="danger">{shiftsError}</Typography.Text> : null}
-        </Space>
-      </Card>
+      {shiftsError ? (
+        <section className="panel">
+          <div className="panel__body">
+            <h2 className="panel__title">Не удалось обновить смены</h2>
+            <p className="panel__text">{shiftsError}</p>
+          </div>
+        </section>
+      ) : null}
 
-      <Card title="Список смен">
-        <List
-          dataSource={shifts}
-          locale={{ emptyText: 'Смены не найдены' }}
-          renderItem={(shift) => {
-            const summary = shiftSummaries[shift.id]
-            return (
-              <List.Item
-                onClick={() => handleOpenShiftPaymentStats(shift.id)}
-                style={{ cursor: 'pointer' }}
-              >
-                <Space direction="vertical" size={0} style={{ width: '100%' }}>
-                  <Typography.Text>
-                    {dayjs(shift.startedAt).format('DD.MM.YYYY HH:mm')} -{' '}
-                    {shift.endedAt ? dayjs(shift.endedAt).format('DD.MM.YYYY HH:mm') : 'по настоящее время'}
-                  </Typography.Text>
-                  <Typography.Text type="secondary">
-                    Статус: {shift.status} • Доставки: {summary?.deliveries ?? 0} • Заработок: {summary?.earnings ?? 0} ₸
-                  </Typography.Text>
-                </Space>
-              </List.Item>
-            )
-          }}
-        />
-      </Card>
-    </Space>
+      <section className="panel">
+        <div className="panel__body">
+          <div className="panel__header">
+            <div>
+              <h2 className="panel__title">История смен</h2>
+              <p className="panel__text">Нажмите на смену, чтобы открыть оплату и доставки.</p>
+            </div>
+            {isCalculating ? <Spin size="small" /> : null}
+          </div>
+
+          <List
+            dataSource={shifts}
+            locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Смен пока нет" /> }}
+            renderItem={(shift) => {
+              const summary = shiftSummaries[shift.id]
+              return (
+                <List.Item
+                  onClick={() => handleOpenShiftPaymentStats(shift.id)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <div style={{ width: '100%' }}>
+                    <strong>
+                      {dayjs(shift.startedAt).format('DD.MM HH:mm')} -{' '}
+                      {shift.endedAt ? dayjs(shift.endedAt).format('HH:mm') : 'сейчас'}
+                    </strong>
+                    <p className="panel__text">
+                      {shift.status === 'ACTIVE' ? 'Активная' : 'Закрыта'} · {summary?.deliveries ?? 0} доставок ·{' '}
+                      {summary?.earnings ?? 0} ₸
+                    </p>
+                  </div>
+                </List.Item>
+              )
+            }}
+          />
+        </div>
+      </section>
+    </div>
   )
 }

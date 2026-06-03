@@ -1,13 +1,13 @@
 import { Tag } from 'antd'
 import type { DeliveryStatus } from '../../types/models'
 
-const statusConfig: Record<DeliveryStatus, { color: string; label: string }> = {
-  pending: { color: 'default', label: 'В ожидании' },
-  on_the_way: { color: 'processing', label: 'В пути' },
-  delivered: { color: 'success', label: 'Доставлен' },
-  failed: { color: 'error', label: 'Не доставлен' },
-  canceled_under_21: { color: 'warning', label: 'Отменен: нет 21 года' },
-  canceled_client_rejected: { color: 'warning', label: 'Отменен: клиент отказался' },
+const statusConfig: Record<DeliveryStatus, { label: string }> = {
+  pending: { label: 'Ждет курьера' },
+  on_the_way: { label: 'Везете' },
+  delivered: { label: 'Выдан' },
+  failed: { label: 'Проблема' },
+  canceled_under_21: { label: 'Нет 21 года' },
+  canceled_client_rejected: { label: 'Отказ клиента' },
 }
 
 interface Props {
@@ -16,5 +16,5 @@ interface Props {
 
 export function StatusTag({ status }: Props) {
   const config = statusConfig[status]
-  return <Tag color={config.color}>{config.label}</Tag>
+  return <Tag className={`status-tag status-tag--${status}`}>{config.label}</Tag>
 }

@@ -56,7 +56,7 @@ export function ShiftPaymentStatsPage() {
     void loadReport()
   }, [loadReport])
 
-  const title = shiftId ? 'Отчет по оплатам смены' : 'Отчет по оплатам текущей смены'
+  const title = shiftId ? 'Оплата смены' : 'Оплата сейчас'
   const generatedAt = report?.generatedAt ? dayjs(report.generatedAt).format('DD.MM.YYYY HH:mm') : '-'
   const totalDeliveryEarnings = useMemo(() => {
     return (
@@ -67,55 +67,46 @@ export function ShiftPaymentStatsPage() {
   }, [report?.shifts])
 
   return (
-    <Space direction="vertical" style={{ width: '100%' }}>
-      <Space align="center" style={{ justifyContent: 'space-between', width: '100%' }}>
-        <Typography.Title level={4} style={{ margin: 0 }}>
-          {title}
-        </Typography.Title>
-        <Space>
-          <Button icon={<ReloadOutlined />} loading={isLoading} onClick={() => void loadReport()} />
-          <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/shifts')}>
+    <div className="screen">
+      <section className="screen-hero screen-hero--compact">
+        <span className="eyebrow">Отчет</span>
+        <h1 className="screen-title screen-title--sm">{title}</h1>
+        <p className="screen-copy">
+          {shiftId ? `Смена ${shiftId}` : 'Текущая активная смена'} · сформировано {generatedAt}
+        </p>
+        <Space wrap>
+          <Button
+            className="touch-action secondary-action"
+            icon={<ReloadOutlined />}
+            loading={isLoading}
+            onClick={() => void loadReport()}
+          >
+            Обновить
+          </Button>
+          <Button className="touch-action secondary-action" icon={<ArrowLeftOutlined />} onClick={() => navigate('/shifts')}>
             Смены
           </Button>
         </Space>
-      </Space>
+      </section>
 
-      <Card>
-        <Space direction="vertical" style={{ width: '100%' }}>
-          <Typography.Text>
-            Смена: <Tag>{shiftId ?? 'текущая активная'}</Tag>
-          </Typography.Text>
-          <Typography.Text type="secondary">Сформировано: {generatedAt}</Typography.Text>
-        </Space>
-      </Card>
-
-      <Card title="Итоги">
-        <Row gutter={[12, 12]}>
-          <Col xs={12}>
-            <Statistic title="Смен" value={report?.summary.totalShifts ?? 0} loading={isLoading} />
-          </Col>
-          <Col xs={12}>
-            <Statistic title="Закрытых" value={report?.summary.closedShifts ?? 0} loading={isLoading} />
-          </Col>
-          <Col xs={12}>
-            <Statistic title="Незавершенных" value={report?.summary.unfinishedShifts ?? 0} loading={isLoading} />
-          </Col>
-          <Col xs={12}>
-            <Statistic title="Заказов" value={report?.summary.totalOrders ?? 0} loading={isLoading} />
-          </Col>
-          <Col xs={24}>
-            <Statistic
-              title="Общая сумма"
-              value={report?.summary.totalAmount ?? 0}
-              suffix="₸"
-              loading={isLoading}
-            />
-          </Col>
-          <Col xs={24}>
-            <Statistic title="Заработок с доставки" value={totalDeliveryEarnings} suffix="₸" loading={isLoading} />
-          </Col>
-        </Row>
-      </Card>
+      <section className="metric-grid" aria-label="Итоги оплат">
+        <div className="metric">
+          <span className="metric__label">Заказов</span>
+          <span className="metric__value">{report?.summary.totalOrders ?? 0}</span>
+        </div>
+        <div className="metric">
+          <span className="metric__label">Сумма</span>
+          <span className="metric__value">{report?.summary.totalAmount ?? 0} ₸</span>
+        </div>
+        <div className="metric">
+          <span className="metric__label">Заработок</span>
+          <span className="metric__value">{totalDeliveryEarnings} ₸</span>
+        </div>
+        <div className="metric">
+          <span className="metric__label">Смен</span>
+          <span className="metric__value">{report?.summary.totalShifts ?? 0}</span>
+        </div>
+      </section>
 
       {report?.shifts.map((shiftReport) => (
         <ShiftPaymentReportCard key={shiftReport.shift.id} shiftReport={shiftReport} isLoading={isLoading} />
@@ -126,7 +117,7 @@ export function ShiftPaymentStatsPage() {
           <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Нет данных по сменам" />
         </Card>
       ) : null}
-    </Space>
+    </div>
   )
 }
 

@@ -1,5 +1,5 @@
 import { SafetyCertificateOutlined } from '@ant-design/icons'
-import { Button, Card, Typography, message } from 'antd'
+import { Button, message } from 'antd'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { useSnackbar } from '../../hooks/useSnackbar'
@@ -21,14 +21,12 @@ export function LoginCard() {
   }
 
   return (
-    <Card>
-      <Typography.Title level={4} style={{ marginTop: 0 }}>
-        Корпоративный вход
-      </Typography.Title>
-      <Typography.Paragraph type="secondary">
-        Авторизуйтесь через Keycloak (realm: naliv-prod).
-      </Typography.Paragraph>
-
+    <section className="screen">
+      <div className="screen-hero">
+        <span className="eyebrow">Naliv Carry</span>
+        <h1 className="screen-title">Войдите и начните смену</h1>
+        <p className="screen-copy">Один вход открывает доставки, смену, оплату и маршрут.</p>
+      </div>
       <Button
         className="touch-action"
         type="primary"
@@ -37,8 +35,8 @@ export function LoginCard() {
         block
         onClick={handleLogin}
       >
-        Войти через Keycloak
+        Войти
       </Button>
-    </Card>
+    </section>
   )
 }

@@ -55,10 +55,10 @@ export function InstallPrompt() {
     <Alert
       type="info"
       showIcon
-      message="Установить приложение"
-      description="Добавьте Naliv Carry на главный экран для быстрого запуска и стабильной работы."
+      message="Добавьте приложение на экран"
+      description="Так Naliv Carry быстрее открывается перед сменой и продолжает работать стабильнее."
       action={
-        <Button className="touch-action" type="primary" icon={<DownloadOutlined />} onClick={() => void handleInstall()}>
+        <Button className="touch-action secondary-action" icon={<DownloadOutlined />} onClick={() => void handleInstall()}>
           Установить
         </Button>
       }

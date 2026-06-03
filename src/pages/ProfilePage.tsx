@@ -1,4 +1,4 @@
-import { Button, Card, Form, Input, Space, Typography, message } from 'antd'
+import { Button, Collapse, Form, Input, Space, message } from 'antd'
 import { CopyOutlined, LogoutOutlined, UserOutlined } from '@ant-design/icons'
 import { useEffect, type ReactNode } from 'react'
 import { changeCourierPassword } from '../api/courierApi'
@@ -59,23 +59,26 @@ export function ProfilePage() {
   }
 
   return (
-    <Space direction="vertical" style={{ width: '100%' }}>
-      <Typography.Title level={4} style={{ margin: 0 }}>
-        Профиль курьера
-      </Typography.Title>
-      <Card>
-        <Space direction="vertical" size={12} style={{ width: '100%' }}>
+    <div className="screen">
+      <section className="screen-hero screen-hero--compact">
+        <span className="eyebrow">Профиль</span>
+        <h1 className="screen-title screen-title--sm">{profile?.name ?? user?.name ?? 'Курьер'}</h1>
+        <p className="screen-copy">{profile?.login ?? user?.phoneOrEmail ?? 'Данные загружаются'}</p>
+      </section>
+
+      <section className="panel">
+        <div className="panel__body">
           <Space align="center" size={12}>
-            <UserOutlined style={{ fontSize: 28 }} />
-            <Space direction="vertical" size={0}>
-              <Typography.Text strong>{profile?.name ?? user?.name ?? '-'}</Typography.Text>
-              <Typography.Text type="secondary">{profile?.login ?? user?.phoneOrEmail ?? '-'}</Typography.Text>
-            </Space>
+            <UserOutlined style={{ fontSize: 28, color: 'var(--app-accent)' }} />
+            <div>
+              <h2 className="panel__title">Рабочие данные</h2>
+              <p className="panel__text">Покажите ID диспетчеру, если он нужен для проверки.</p>
+            </div>
           </Space>
 
-          <ProfileField label="Workforce ID" value={workforceId}>
+          <ProfileField label="ID курьера" value={workforceId}>
             <Button
-              className="touch-action profile-field__action"
+              className="touch-action profile-field__action secondary-action"
               icon={<CopyOutlined />}
               onClick={() => void handleCopyWorkforceId()}
               disabled={workforceId === '-'}
@@ -83,42 +86,51 @@ export function ProfilePage() {
               Копировать
             </Button>
           </ProfileField>
-          <ProfileField label="Уровень доступа" value={profile?.access_level ?? '-'} />
+          <ProfileField label="Доступ" value={profile?.access_level ?? '-'} />
           <ProfileField label="Устройство" value={deviceInfo} />
-        </Space>
-      </Card>
-      <Card title="Смена пароля">
-        <Form layout="vertical" onFinish={handleChangePassword} requiredMark={false}>
-          <Form.Item
-            name="currentPassword"
-            label="Текущий пароль"
-            rules={[{ required: true, message: 'Введите текущий пароль' }]}
-          >
-            <Input.Password className="touch-action" />
-          </Form.Item>
-          <Form.Item
-            name="newPassword"
-            label="Новый пароль"
-            rules={[
-              { required: true, message: 'Введите новый пароль' },
-              { min: 6, message: 'Минимум 6 символов' },
-              {
-                pattern: /^(?=.*[A-Za-z])(?=.*\d).+$/,
-                message: 'Пароль должен содержать буквы и цифры',
-              },
-            ]}
-          >
-            <Input.Password className="touch-action" />
-          </Form.Item>
+        </div>
+      </section>
 
-          <Button type="primary" htmlType="submit" className="touch-action" block>
-            Изменить пароль
-          </Button>
-        </Form>
-      </Card>
+      <Collapse
+        items={[
+          {
+            key: 'password',
+            label: 'Сменить пароль',
+            children: (
+              <Form layout="vertical" onFinish={handleChangePassword} requiredMark={false}>
+                <Form.Item
+                  name="currentPassword"
+                  label="Текущий пароль"
+                  rules={[{ required: true, message: 'Введите текущий пароль' }]}
+                >
+                  <Input.Password className="touch-action" />
+                </Form.Item>
+                <Form.Item
+                  name="newPassword"
+                  label="Новый пароль"
+                  rules={[
+                    { required: true, message: 'Введите новый пароль' },
+                    { min: 6, message: 'Минимум 6 символов' },
+                    {
+                      pattern: /^(?=.*[A-Za-z])(?=.*\d).+$/,
+                      message: 'Пароль должен содержать буквы и цифры',
+                    },
+                  ]}
+                >
+                  <Input.Password className="touch-action" />
+                </Form.Item>
+
+                <Button type="primary" htmlType="submit" className="touch-action" block>
+                  Сохранить пароль
+                </Button>
+              </Form>
+            ),
+          },
+        ]}
+      />
+
       <Button
-        danger
-        className="touch-action"
+        className="touch-action danger-action"
         icon={<LogoutOutlined />}
         block
         onClick={async () => {
@@ -127,7 +139,7 @@ export function ProfilePage() {
       >
         Выйти
       </Button>
-    </Space>
+    </div>
   )
 }
 
@@ -141,10 +153,8 @@ function ProfileField({ label, value, children }: ProfileFieldProps) {
   return (
     <div className="profile-field">
       <div className="profile-field__content">
-        <Typography.Text type="secondary">{label}</Typography.Text>
-        <Typography.Text strong copyable={false}>
-          {value}
-        </Typography.Text>
+        <span className="profile-field__label">{label}</span>
+        <span className="profile-field__value">{value}</span>
       </div>
       {children}
     </div>

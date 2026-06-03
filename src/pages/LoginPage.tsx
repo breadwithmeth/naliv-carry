@@ -1,4 +1,3 @@
-import { Col, Row } from 'antd'
 import { Navigate } from 'react-router-dom'
 import { LoginCard } from '../features/auth/LoginCard'
 import { useAuthStore } from '../store/authStore'
@@ -11,10 +10,10 @@ export function LoginPage() {
   }
 
   return (
-    <Row align="middle" justify="center" style={{ minHeight: '100vh', padding: 12 }}>
-      <Col xs={24} sm={16} md={12} lg={8}>
+    <main className="app-shell">
+      <div className="page-container" style={{ minHeight: '100vh', justifyContent: 'center', paddingBottom: 18 }}>
         <LoginCard />
-      </Col>
-    </Row>
+      </div>
+    </main>
   )
 }
