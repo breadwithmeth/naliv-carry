@@ -1,6 +1,7 @@
 import { ConfigProvider, App as AntdApp, theme } from 'antd'
 import { useEffect } from 'react'
 import { AppErrorBoundary } from './components/common/AppErrorBoundary'
+import { useTelegramMiniApp } from './hooks/useTelegramMiniApp'
 import { AppRouter } from './routes/AppRouter'
 import { useThemeStore } from './store/themeStore'
 
@@ -8,6 +9,8 @@ function App() {
   const currentTheme = useThemeStore((state) => state.theme)
   const isDarkMode = currentTheme === 'dark'
   const algorithm = isDarkMode ? theme.darkAlgorithm : theme.defaultAlgorithm
+
+  useTelegramMiniApp()
 
   useEffect(() => {
     document.documentElement.dataset.theme = currentTheme
