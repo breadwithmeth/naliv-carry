@@ -6,6 +6,8 @@ const statusConfig: Record<DeliveryStatus, { color: string; label: string }> = {
   on_the_way: { color: 'processing', label: 'В пути' },
   delivered: { color: 'success', label: 'Доставлен' },
   failed: { color: 'error', label: 'Не доставлен' },
+  canceled_under_21: { color: 'warning', label: 'Отменен: нет 21 года' },
+  canceled_client_rejected: { color: 'warning', label: 'Отменен: клиент отказался' },
 }
 
 interface Props {

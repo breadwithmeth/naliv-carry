@@ -4,6 +4,7 @@ import type {
   AvailableOrdersData,
   BackendDeliveryOrder,
   BackendOrderDetailsData,
+  CancelOrderData,
   DeliveredOrdersData,
   DeliveryStatus,
   MyDeliveriesData,
@@ -20,6 +21,12 @@ function normalizeStatus(statusName?: string, statusCode?: number): DeliveryStat
   if (statusCode === 5) {
     return 'failed'
   }
+  if (statusCode === 53) {
+    return 'canceled_under_21'
+  }
+  if (statusCode === 54) {
+    return 'canceled_client_rejected'
+  }
 
   const value = (statusName ?? '').toLowerCase()
 
@@ -31,6 +38,12 @@ function normalizeStatus(statusName?: string, statusCode?: number): DeliveryStat
   }
   if (value.includes('не доставлен') || value.includes('failed')) {
     return 'failed'
+  }
+  if (value.includes('нет 21')) {
+    return 'canceled_under_21'
+  }
+  if (value.includes('отказ') || value.includes('не принимает')) {
+    return 'canceled_client_rejected'
   }
 
   return 'pending'
@@ -171,6 +184,20 @@ export async function takeOrder(orderId: string): Promise<void> {
 
 export async function deliverOrder(orderId: string): Promise<void> {
   await apiClient.post(`/courier/orders/${orderId}/deliver`)
+}
+
+export async function cancelOrderUnder21(orderId: string): Promise<ApiResponse<CancelOrderData>> {
+  const response = await apiClient.post<ApiResponse<CancelOrderData>>(
+    `/courier/orders/${orderId}/cancel-under-21`,
+  )
+  return response.data
+}
+
+export async function cancelOrderClientRejected(orderId: string): Promise<ApiResponse<CancelOrderData>> {
+  const response = await apiClient.post<ApiResponse<CancelOrderData>>(
+    `/courier/orders/${orderId}/cancel-client-rejected`,
+  )
+  return response.data
 }
 
 export async function updateOrderStatus(orderId: string, status: DeliveryStatus): Promise<void> {

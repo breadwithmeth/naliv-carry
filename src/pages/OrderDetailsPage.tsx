@@ -7,11 +7,13 @@ import {
   Typography,
   Button,
   message,
+  Popconfirm,
   Spin,
 } from 'antd'
 import { EnvironmentOutlined, PhoneOutlined, WhatsAppOutlined } from '@ant-design/icons'
 import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
+import { getApiErrorMessage } from '../api/errors'
 import { StatusTag } from '../components/common/StatusTag'
 import { useSnackbar } from '../hooks/useSnackbar'
 import { useOrdersStore } from '../store/ordersStore'
@@ -22,9 +24,12 @@ export function OrderDetailsPage() {
   const fetchOrderById = useOrdersStore((state) => state.fetchOrderById)
   const takeOrder = useOrdersStore((state) => state.takeOrder)
   const deliverOrder = useOrdersStore((state) => state.deliverOrder)
+  const cancelOrderUnder21 = useOrdersStore((state) => state.cancelOrderUnder21)
+  const cancelOrderClientRejected = useOrdersStore((state) => state.cancelOrderClientRejected)
   const selectedOrder = useOrdersStore((state) => state.selectedOrder)
   const [isBusy, setIsBusy] = useState(() => Boolean(orderId))
   const [isTakingOrder, setIsTakingOrder] = useState(false)
+  const [cancelingAction, setCancelingAction] = useState<'under_21' | 'client_rejected' | null>(null)
   const { showError } = useSnackbar()
 
   useEffect(() => {
@@ -72,8 +77,8 @@ export function OrderDetailsPage() {
       await takeOrder(selectedOrderId)
       await fetchOrderById(selectedOrderId)
       message.success('Заказ взят в доставку')
-    } catch {
-      showError('Не удалось взять заказ в доставку')
+    } catch (error) {
+      showError(getApiErrorMessage(error, 'Не удалось взять заказ в доставку'))
     } finally {
       setIsTakingOrder(false)
     }
@@ -87,8 +92,46 @@ export function OrderDetailsPage() {
     try {
       await deliverOrder(selectedOrder.id)
       message.success('Доставка подтверждена')
-    } catch {
-      showError('Не удалось подтвердить доставку')
+    } catch (error) {
+      showError(getApiErrorMessage(error, 'Не удалось подтвердить доставку'))
+    }
+  }
+
+  const onCancelUnder21 = async () => {
+    if (!selectedOrder || cancelingAction) {
+      return
+    }
+
+    const selectedOrderId = selectedOrder.id
+    setCancelingAction('under_21')
+
+    try {
+      const responseMessage = await cancelOrderUnder21(selectedOrderId)
+      await fetchOrderById(selectedOrderId)
+      message.success(responseMessage || 'Заказ отменен')
+    } catch (error) {
+      showError(getApiErrorMessage(error, 'Не удалось отменить заказ'))
+    } finally {
+      setCancelingAction(null)
+    }
+  }
+
+  const onCancelClientRejected = async () => {
+    if (!selectedOrder || cancelingAction) {
+      return
+    }
+
+    const selectedOrderId = selectedOrder.id
+    setCancelingAction('client_rejected')
+
+    try {
+      const responseMessage = await cancelOrderClientRejected(selectedOrderId)
+      await fetchOrderById(selectedOrderId)
+      message.success(responseMessage || 'Заказ отменен')
+    } catch (error) {
+      showError(getApiErrorMessage(error, 'Не удалось отменить заказ'))
+    } finally {
+      setCancelingAction(null)
     }
   }
 
@@ -99,6 +142,18 @@ export function OrderDetailsPage() {
   if (!selectedOrder) {
     return <Typography.Text>Заказ не найден</Typography.Text>
   }
+
+  const isOrderInDelivery = selectedOrder.statusCode === 3 || selectedOrder.status === 'on_the_way'
+  const isOrderFinished =
+    selectedOrder.statusCode === 4 ||
+    selectedOrder.statusCode === 5 ||
+    selectedOrder.statusCode === 53 ||
+    selectedOrder.statusCode === 54 ||
+    selectedOrder.status === 'delivered' ||
+    selectedOrder.status === 'failed' ||
+    selectedOrder.status === 'canceled_under_21' ||
+    selectedOrder.status === 'canceled_client_rejected'
+  const isCancelDisabled = !isOrderInDelivery || isOrderFinished || Boolean(cancelingAction)
 
   return (
     <Space direction="vertical" style={{ width: '100%' }}>
@@ -217,6 +272,7 @@ export function OrderDetailsPage() {
             loading={isTakingOrder}
             disabled={
               isTakingOrder ||
+              isOrderFinished ||
               selectedOrder.statusCode === 3 ||
               selectedOrder.status === 'on_the_way'
             }
@@ -226,14 +282,42 @@ export function OrderDetailsPage() {
           <Button
             className="touch-action"
             onClick={onDeliverOrder}
-            disabled={
-              !(selectedOrder.statusCode === 3 || selectedOrder.status === 'on_the_way') ||
-              selectedOrder.statusCode === 4 ||
-              selectedOrder.status === 'delivered'
-            }
+            disabled={!isOrderInDelivery || isOrderFinished}
           >
             Выдать заказ
           </Button>
+          <Popconfirm
+            title="Отменить заказ?"
+            description="Причина: клиенту нет 21 года"
+            okText="Отменить"
+            cancelText="Назад"
+            onConfirm={() => void onCancelUnder21()}
+          >
+            <Button
+              className="touch-action"
+              danger
+              loading={cancelingAction === 'under_21'}
+              disabled={isCancelDisabled}
+            >
+              Клиенту нет 21 года
+            </Button>
+          </Popconfirm>
+          <Popconfirm
+            title="Отменить заказ?"
+            description="Причина: клиент не принимает заказ"
+            okText="Отменить"
+            cancelText="Назад"
+            onConfirm={() => void onCancelClientRejected()}
+          >
+            <Button
+              className="touch-action"
+              danger
+              loading={cancelingAction === 'client_rejected'}
+              disabled={isCancelDisabled}
+            >
+              Клиент не принимает
+            </Button>
+          </Popconfirm>
         </Space>
       </Card>
     </Space>

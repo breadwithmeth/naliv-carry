@@ -18,14 +18,19 @@ registerRoute(
   ({ url, request }) =>
     request.method === 'GET' &&
     (url.pathname.startsWith('/api/courier/orders/my-deliveries') ||
+      url.pathname.startsWith('/api/courier/orders/available') ||
+      url.pathname.startsWith('/api/courier/orders/delivered') ||
+      /^\/api\/courier\/orders\/[^/]+$/.test(url.pathname) ||
       url.pathname.startsWith('/api/courier/auth/profile') ||
       url.pathname.startsWith('/api/courier/cities') ||
-      url.pathname.startsWith('/api/courier/location')),
+      url.pathname.startsWith('/api/courier/location') ||
+      url.pathname.startsWith('/api/courier/shifts')),
   new NetworkFirst({
-    cacheName: 'orders-api-cache',
+    cacheName: 'courier-api-cache',
+    networkTimeoutSeconds: 6,
     plugins: [
       new ExpirationPlugin({
-        maxEntries: 80,
+        maxEntries: 140,
         maxAgeSeconds: 60 * 60 * 24,
       }),
     ],

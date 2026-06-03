@@ -1,4 +1,10 @@
-export type DeliveryStatus = 'pending' | 'on_the_way' | 'delivered' | 'failed'
+export type DeliveryStatus =
+  | 'pending'
+  | 'on_the_way'
+  | 'delivered'
+  | 'failed'
+  | 'canceled_under_21'
+  | 'canceled_client_rejected'
 
 export interface CourierProfile {
   id: string
@@ -87,6 +93,18 @@ export interface ApiResponse<T> {
   success: boolean
   data: T
   message: string
+}
+
+export interface CancelOrderData {
+  order_id: number
+  order_uuid: string
+  previous_status: number
+  new_status: {
+    status: number
+    status_name: string
+    timestamp: string
+    isCanceled: number
+  }
 }
 
 export interface CourierEmployee {

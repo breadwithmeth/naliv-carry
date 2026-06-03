@@ -21,14 +21,19 @@ export default defineConfig({
       srcDir: 'src',
       filename: 'sw.ts',
       manifest: {
+        id: '/',
         name: 'Naliv Carry Courier',
         short_name: 'NalivCarry',
-        description: 'Courier delivery system for logistics employees',
+        description: 'Мобильное приложение курьера Naliv Carry',
+        lang: 'ru',
         theme_color: '#1677ff',
-        background_color: '#ffffff',
+        background_color: '#f5f7fa',
         display: 'standalone',
+        display_override: ['standalone', 'minimal-ui'],
         orientation: 'portrait',
         start_url: '/',
+        scope: '/',
+        categories: ['business', 'productivity'],
         icons: [
           {
             src: '/icons/pwa-192.svg',

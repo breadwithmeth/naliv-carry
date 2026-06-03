@@ -1,8 +1,11 @@
 import { registerSW } from 'virtual:pwa-register'
 
 export function registerServiceWorker(): void {
-  registerSW({
+  const updateSW = registerSW({
     immediate: true,
+    onNeedRefresh() {
+      void updateSW(true)
+    },
     onRegisteredSW(swScriptUrl: string | undefined) {
       if (!swScriptUrl) {
         return

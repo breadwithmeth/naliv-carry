@@ -10,6 +10,8 @@ const statusOptions = [
   { value: 'on_the_way', label: 'В пути' },
   { value: 'delivered', label: 'Доставлен' },
   { value: 'failed', label: 'Не доставлен' },
+  { value: 'canceled_under_21', label: 'Отменен: нет 21 года' },
+  { value: 'canceled_client_rejected', label: 'Отменен: клиент отказался' },
 ]
 
 export function OrdersPage() {

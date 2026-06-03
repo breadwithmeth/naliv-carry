@@ -10,6 +10,7 @@ import {
 import { Button, Drawer, Space, Layout, Typography } from 'antd'
 import { useState, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { InstallPrompt } from '../common/InstallPrompt'
 import { OfflineBanner } from '../common/OfflineBanner'
 
 const { Header, Content } = Layout
@@ -60,6 +61,7 @@ export function CourierLayout({ children }: Props) {
       </Header>
       <Content>
         <div className="page-container">
+          <InstallPrompt />
           <OfflineBanner />
           {children}
         </div>

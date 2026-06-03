@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import {
+  cancelOrderClientRejected,
+  cancelOrderUnder21,
   deliverOrder,
   getAvailableOrders,
   getDeliveredOrders,
@@ -36,6 +38,8 @@ interface OrdersState {
   updateStatus: (orderId: string, status: DeliveryStatus) => Promise<void>
   takeOrder: (orderId: string) => Promise<void>
   deliverOrder: (orderId: string) => Promise<void>
+  cancelOrderUnder21: (orderId: string) => Promise<string>
+  cancelOrderClientRejected: (orderId: string) => Promise<string>
   setMode: (mode: OrdersViewMode) => void
 }
 
@@ -60,6 +64,43 @@ function normalizeNumber(value: unknown, fallback: number): number {
 function patchOrderStatus(orders: Order[], orderId: string, status: DeliveryStatus): Order[] {
   return orders.map((order) =>
     order.id === orderId ? { ...order, status, updatedAt: new Date().toISOString() } : order,
+  )
+}
+
+function patchCanceledOrder(
+  order: Order,
+  status: DeliveryStatus,
+  statusCode: number,
+  statusName: string,
+  timestamp: string,
+): Order {
+  return {
+    ...order,
+    status,
+    statusCode,
+    statusName,
+    updatedAt: timestamp,
+    statusHistory: [
+      ...(order.statusHistory ?? []),
+      {
+        status: statusCode,
+        statusName,
+        timestamp,
+      },
+    ],
+  }
+}
+
+function patchCanceledOrders(
+  orders: Order[],
+  orderId: string,
+  status: DeliveryStatus,
+  statusCode: number,
+  statusName: string,
+  timestamp: string,
+): Order[] {
+  return orders.map((order) =>
+    order.id === orderId ? patchCanceledOrder(order, status, statusCode, statusName, timestamp) : order,
   )
 }
 
@@ -205,6 +246,56 @@ export const useOrdersStore = create<OrdersState>()(
             selectedOrder: selectedDeliveredOrder ?? state.selectedOrder,
           }
         })
+      },
+      cancelOrderUnder21: async (orderId: string) => {
+        const response = await cancelOrderUnder21(orderId)
+        const { status, status_name: statusName, timestamp } = response.data.new_status
+
+        set((state) => ({
+          orders: patchCanceledOrders(
+            normalizeOrders(state.orders),
+            orderId,
+            'canceled_under_21',
+            status,
+            statusName,
+            timestamp,
+          ),
+          availableOrders: normalizeOrders(state.availableOrders).filter((order) => order.id !== orderId),
+          selectedOrder:
+            state.selectedOrder?.id === orderId
+              ? patchCanceledOrder(state.selectedOrder, 'canceled_under_21', status, statusName, timestamp)
+              : state.selectedOrder,
+        }))
+
+        return response.message
+      },
+      cancelOrderClientRejected: async (orderId: string) => {
+        const response = await cancelOrderClientRejected(orderId)
+        const { status, status_name: statusName, timestamp } = response.data.new_status
+
+        set((state) => ({
+          orders: patchCanceledOrders(
+            normalizeOrders(state.orders),
+            orderId,
+            'canceled_client_rejected',
+            status,
+            statusName,
+            timestamp,
+          ),
+          availableOrders: normalizeOrders(state.availableOrders).filter((order) => order.id !== orderId),
+          selectedOrder:
+            state.selectedOrder?.id === orderId
+              ? patchCanceledOrder(
+                  state.selectedOrder,
+                  'canceled_client_rejected',
+                  status,
+                  statusName,
+                  timestamp,
+                )
+              : state.selectedOrder,
+        }))
+
+        return response.message
       },
     }),
     {

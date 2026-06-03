@@ -8,6 +8,7 @@ import { useOrdersStore } from '../store/ordersStore'
 import { useShiftsStore } from '../store/shiftsStore'
 
 const PAGE_OPENED_AT_MS = Date.now()
+const finishedOrderStatuses = new Set(['delivered', 'failed', 'canceled_under_21', 'canceled_client_rejected'])
 
 export function DashboardPage() {
   const navigate = useNavigate()
@@ -30,7 +31,7 @@ export function DashboardPage() {
     !location || !lastLocationDate || Number.isNaN(lastLocationDate.getTime()) || (locationAgeMs ?? 0) > 6 * 60 * 60 * 1000
 
   const currentOrdersCount = useMemo(() => {
-    return orders.filter((order) => order.status !== 'delivered' && order.status !== 'failed').length
+    return orders.filter((order) => !finishedOrderStatuses.has(order.status)).length
   }, [orders])
 
   const activeDeliveryOrders = useMemo(() => {
