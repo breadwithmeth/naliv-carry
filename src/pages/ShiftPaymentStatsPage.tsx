@@ -1,12 +1,12 @@
 import { ArrowLeftOutlined, ReloadOutlined } from '@ant-design/icons'
 import { AxiosError } from 'axios'
 import { Button, Card, Col, Empty, Row, Space, Statistic, Table, Tag, Typography } from 'antd'
-import dayjs from 'dayjs'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getShiftPaymentReport } from '../api/courierApi'
 import { useSnackbar } from '../hooks/useSnackbar'
 import type { ShiftPaymentReportData, ShiftPaymentReportShift } from '../types/models'
+import { formatLocalDateTime } from '../utils/dateTime'
 
 function formatMoney(value: number): string {
   return `${value.toFixed(2)} ₸`
@@ -57,7 +57,7 @@ export function ShiftPaymentStatsPage() {
   }, [loadReport])
 
   const title = shiftId ? 'Оплата смены' : 'Оплата сейчас'
-  const generatedAt = report?.generatedAt ? dayjs(report.generatedAt).format('DD.MM.YYYY HH:mm') : '-'
+  const generatedAt = formatLocalDateTime(report?.generatedAt)
   const totalDeliveryEarnings = useMemo(() => {
     return (
       report?.shifts.reduce((sum, shiftReport) => {
@@ -165,9 +165,9 @@ function ShiftPaymentReportCard({ shiftReport, isLoading }: ShiftPaymentReportCa
     })
   }, [ordersByPaymentType, shiftReport.paymentTypes])
 
-  const period = `${dayjs(shiftReport.period.startDate).format('DD.MM.YYYY HH:mm')} - ${dayjs(
+  const period = `${formatLocalDateTime(shiftReport.period.startDate)} - ${formatLocalDateTime(
     shiftReport.period.endDate,
-  ).format('DD.MM.YYYY HH:mm')}`
+  )}`
   const shiftDeliveryEarnings = useMemo(() => {
     return shiftReport.orders.reduce((sum, order) => sum + order.deliveryCost, 0)
   }, [shiftReport.orders])

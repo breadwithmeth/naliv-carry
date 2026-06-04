@@ -26,6 +26,18 @@ function normalizeMessage(value: unknown): string | null {
 }
 
 export function getApiErrorMessage(error: unknown, fallback: string): string {
+  if (!navigator.onLine) {
+    return 'Нет интернета. Проверьте подключение и попробуйте снова.'
+  }
+
+  if (error instanceof AxiosError && !error.response) {
+    if (error.code === 'ECONNABORTED') {
+      return 'Сервер долго не отвечает. Проверьте интернет и попробуйте снова.'
+    }
+
+    return 'Не удалось подключиться к серверу. Проверьте интернет и попробуйте снова.'
+  }
+
   if (error instanceof AxiosError && isApiErrorBody(error.response?.data)) {
     return (
       normalizeMessage(error.response.data.error?.message) ??

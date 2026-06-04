@@ -1,9 +1,9 @@
 import { Button, Empty, List, Spin, message } from 'antd'
-import dayjs from 'dayjs'
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSnackbar } from '../hooks/useSnackbar'
 import { useShiftsStore } from '../store/shiftsStore'
+import { formatLocalDateTime, formatLocalTime } from '../utils/dateTime'
 
 export function ShiftsPage() {
   const navigate = useNavigate()
@@ -60,7 +60,7 @@ export function ShiftsPage() {
         <h1 className="screen-title screen-title--sm">{activeShift ? 'Вы на линии' : 'Смена закрыта'}</h1>
         <p className="screen-copy">
           {activeShift
-            ? `Начали в ${dayjs(activeShift.startedAt).format('HH:mm')}. Закройте смену в конце работы.`
+            ? `Начали в ${formatLocalTime(activeShift.startedAt)}. Закройте смену в конце работы.`
             : 'Откройте смену перед первой доставкой.'}
         </p>
         <div className="hero-actions">
@@ -139,8 +139,7 @@ export function ShiftsPage() {
                 >
                   <div style={{ width: '100%' }}>
                     <strong>
-                      {dayjs(shift.startedAt).format('DD.MM HH:mm')} -{' '}
-                      {shift.endedAt ? dayjs(shift.endedAt).format('HH:mm') : 'сейчас'}
+                      {formatLocalDateTime(shift.startedAt)} - {shift.endedAt ? formatLocalTime(shift.endedAt) : 'сейчас'}
                     </strong>
                     <p className="panel__text">
                       {shift.status === 'ACTIVE' ? 'Активная' : 'Закрыта'} · {summary?.deliveries ?? 0} доставок ·{' '}

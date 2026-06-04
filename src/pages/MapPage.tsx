@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { useSnackbar } from '../hooks/useSnackbar'
 import { useCourierStore } from '../store/courierStore'
 import { useOrdersStore } from '../store/ordersStore'
+import { formatLocalTime, getDateTimeMs } from '../utils/dateTime'
 import { build2gisNavigationUrl } from '../utils/navigation'
 
 const PAGE_OPENED_AT_MS = Date.now()
@@ -20,10 +21,10 @@ export function MapPage() {
   const saveLocation = useCourierStore((state) => state.saveLocation)
   const { showError } = useSnackbar()
 
-  const lastLocationDate = location?.updated_at ? new Date(location.updated_at) : null
-  const locationAgeMs = lastLocationDate ? PAGE_OPENED_AT_MS - lastLocationDate.getTime() : null
+  const lastLocationMs = getDateTimeMs(location?.updated_at)
+  const locationAgeMs = lastLocationMs ? PAGE_OPENED_AT_MS - lastLocationMs : null
   const isLocationStale =
-    !location || !lastLocationDate || Number.isNaN(lastLocationDate.getTime()) || (locationAgeMs ?? 0) > 6 * 60 * 60 * 1000
+    !location || !lastLocationMs || (locationAgeMs ?? 0) > 6 * 60 * 60 * 1000
 
   useEffect(() => {
     loadCities().catch(() => {
@@ -92,7 +93,7 @@ export function MapPage() {
         <div className="metric">
           <span className="metric__label">Обновлена</span>
           <span className="metric__value">
-            {location?.updated_at ? new Date(location.updated_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : '-'}
+            {formatLocalTime(location?.updated_at)}
           </span>
         </div>
       </section>

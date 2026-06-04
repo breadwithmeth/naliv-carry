@@ -16,6 +16,7 @@ import { getApiErrorMessage } from '../api/errors'
 import { StatusTag } from '../components/common/StatusTag'
 import { useSnackbar } from '../hooks/useSnackbar'
 import { useOrdersStore } from '../store/ordersStore'
+import { formatLocalDateTime } from '../utils/dateTime'
 import { build2gisNavigationUrl } from '../utils/navigation'
 
 function formatMoney(value: number | null | undefined): string {
@@ -336,7 +337,7 @@ export function OrderDetailsPage() {
                   <List.Item>
                     <div>
                       <strong>{item.statusName}</strong>
-                      <p className="panel__text">{item.timestamp ?? '-'}</p>
+                      <p className="panel__text">{formatLocalDateTime(item.timestamp)}</p>
                     </div>
                   </List.Item>
                 )}
@@ -352,7 +353,7 @@ export function OrderDetailsPage() {
                 <InfoRow label="UUID" value={selectedOrder.orderUuid} />
                 <InfoRow label="Адрес в системе" value={selectedOrder.deliveryAddressName} />
                 <InfoRow label="Статус" value={selectedOrder.statusName ?? selectedOrder.status} />
-                <InfoRow label="Создан" value={selectedOrder.createdAt} />
+                <InfoRow label="Создан" value={formatLocalDateTime(selectedOrder.createdAt)} />
                 <InfoRow label="Позиций" value={selectedOrder.itemsCount ?? orderItems.length} />
               </div>
             ),

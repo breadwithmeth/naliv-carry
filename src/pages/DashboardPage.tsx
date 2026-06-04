@@ -1,11 +1,11 @@
 import { Alert, Button, Input, Space, Spin, message } from 'antd'
-import dayjs from 'dayjs'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSnackbar } from '../hooks/useSnackbar'
 import { useCourierStore } from '../store/courierStore'
 import { useOrdersStore } from '../store/ordersStore'
 import { useShiftsStore } from '../store/shiftsStore'
+import { formatLocalTime, getDateTimeMs } from '../utils/dateTime'
 
 const PAGE_OPENED_AT_MS = Date.now()
 const finishedOrderStatuses = new Set(['delivered', 'failed', 'canceled_under_21', 'canceled_client_rejected'])
@@ -26,10 +26,10 @@ export function DashboardPage() {
   const [searchOrderId, setSearchOrderId] = useState('')
   const { showError } = useSnackbar()
 
-  const lastLocationDate = location?.updated_at ? new Date(location.updated_at) : null
-  const locationAgeMs = lastLocationDate ? PAGE_OPENED_AT_MS - lastLocationDate.getTime() : null
+  const lastLocationMs = getDateTimeMs(location?.updated_at)
+  const locationAgeMs = lastLocationMs ? PAGE_OPENED_AT_MS - lastLocationMs : null
   const isLocationStale =
-    !location || !lastLocationDate || Number.isNaN(lastLocationDate.getTime()) || (locationAgeMs ?? 0) > 6 * 60 * 60 * 1000
+    !location || !lastLocationMs || (locationAgeMs ?? 0) > 6 * 60 * 60 * 1000
 
   const currentOrdersCount = useMemo(() => {
     return orders.filter((order) => !finishedOrderStatuses.has(order.status)).length
@@ -165,7 +165,7 @@ export function DashboardPage() {
         <div className="metric">
           <span className="metric__label">Старт</span>
           <span className="metric__value">
-            {activeShift ? dayjs(activeShift.startedAt).format('HH:mm') : '-'}
+            {formatLocalTime(activeShift?.startedAt)}
           </span>
         </div>
         <div className="metric">
