@@ -16,11 +16,17 @@ import { getApiErrorMessage } from '../api/errors'
 import { StatusTag } from '../components/common/StatusTag'
 import { useSnackbar } from '../hooks/useSnackbar'
 import { useOrdersStore } from '../store/ordersStore'
+import type { Order } from '../types/models'
 import { formatLocalDateTime } from '../utils/dateTime'
 import { build2gisNavigationUrl } from '../utils/navigation'
 
+function getFiniteNumber(value: number | null | undefined): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined
+}
+
 function formatMoney(value: number | null | undefined): string {
-  return typeof value === 'number' && Number.isFinite(value) ? `${value.toLocaleString('ru-RU')} ₸` : '-'
+  const amount = getFiniteNumber(value)
+  return amount !== undefined ? `${amount.toLocaleString('ru-RU')} ₸` : '-'
 }
 
 function formatValue(value: string | number | null | undefined): string {
@@ -29,6 +35,35 @@ function formatValue(value: string | number | null | undefined): string {
   }
 
   return String(value)
+}
+
+function getOrderTotalWithServiceFee(order: Order): number | undefined {
+  const costSummary = order.costSummary
+  const finalTotal = getFiniteNumber(costSummary?.finalTotal)
+
+  if (finalTotal !== undefined) {
+    return finalTotal
+  }
+
+  const itemsTotal = getFiniteNumber(costSummary?.itemsTotal)
+
+  if (itemsTotal !== undefined) {
+    const deliveryPrice = getFiniteNumber(costSummary?.deliveryPrice ?? order.deliveryPrice) ?? 0
+    const deliveryServiceFee = getFiniteNumber(costSummary?.deliveryServiceFee) ?? 0
+    const serviceFee = getFiniteNumber(costSummary?.serviceFee) ?? 0
+    const bonusUsed = getFiniteNumber(costSummary?.bonusUsed ?? order.bonus) ?? 0
+    const discount = getFiniteNumber(costSummary?.discount) ?? 0
+
+    return Math.max(itemsTotal + deliveryPrice + deliveryServiceFee + serviceFee - bonusUsed - discount, 0)
+  }
+
+  const baseTotal = getFiniteNumber(costSummary?.totalSum ?? order.totalCost)
+
+  if (baseTotal === undefined) {
+    return undefined
+  }
+
+  return baseTotal + (getFiniteNumber(costSummary?.serviceFee) ?? 0)
 }
 
 export function OrderDetailsPage() {
@@ -205,6 +240,7 @@ export function OrderDetailsPage() {
     : selectedOrder.businessAddress
   const orderItems = selectedOrder.items ?? []
   const statusHistory = selectedOrder.statusHistory ?? []
+  const orderTotalWithServiceFee = getOrderTotalWithServiceFee(selectedOrder)
 
   return (
     <div className="screen">
@@ -284,7 +320,7 @@ export function OrderDetailsPage() {
             <InfoRow label="Подъезд" value={addressDetails?.entrance} />
             <InfoRow label="Этаж" value={addressDetails?.floor} />
             <InfoRow label="Оплата" value={selectedOrder.paymentTypeName} />
-            <InfoRow label="Итого" value={formatMoney(selectedOrder.totalCost)} />
+            <InfoRow label="Итого" value={formatMoney(orderTotalWithServiceFee)} />
             <InfoRow label="Точка" value={point} />
           </div>
         </div>
@@ -322,7 +358,7 @@ export function OrderDetailsPage() {
                 <InfoRow label="Сервис доставки" value={formatMoney(selectedOrder.costSummary?.deliveryServiceFee)} />
                 <InfoRow label="Сервис" value={formatMoney(selectedOrder.costSummary?.serviceFee)} />
                 <InfoRow label="Бонусы" value={formatMoney(selectedOrder.costSummary?.bonusUsed ?? selectedOrder.bonus)} />
-                <InfoRow label="Итого" value={formatMoney(selectedOrder.costSummary?.totalSum ?? selectedOrder.totalCost)} />
+                <InfoRow label="Итого" value={formatMoney(orderTotalWithServiceFee)} />
               </div>
             ),
           },

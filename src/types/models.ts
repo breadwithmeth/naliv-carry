@@ -71,6 +71,8 @@ export interface Order {
     bonusUsed?: number
     subtotal?: number
     totalSum?: number
+    discount?: number
+    finalTotal?: number
   }
   extra?: string
   createdAt?: string

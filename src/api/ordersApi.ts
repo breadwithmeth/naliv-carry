@@ -169,7 +169,9 @@ export async function getOrderById(orderId: string): Promise<Order> {
         serviceFee: sourceOrder.cost_summary.service_fee,
         bonusUsed: sourceOrder.cost_summary.bonus_used,
         subtotal: sourceOrder.cost_summary.subtotal,
-        totalSum: sourceOrder.cost_summary.total_sum ?? sourceOrder.cost_summary.final_total,
+        totalSum: sourceOrder.cost_summary.total_sum,
+        discount: sourceOrder.cost_summary.discount,
+        finalTotal: sourceOrder.cost_summary.final_total,
       }
     : undefined
 
