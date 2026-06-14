@@ -8,10 +8,11 @@ import {
   getDeliveredOrders,
   getOrderById,
   getOrders,
+  releaseOrder,
   takeOrder,
   updateOrderStatus,
 } from '../api/ordersApi'
-import type { DeliveryStatus, Order } from '../types/models'
+import type { DeliveryStatus, Order, ReleaseOrderBody } from '../types/models'
 import { enqueueStatusUpdate } from '../utils/offlineQueue'
 
 type OrdersViewMode = 'my' | 'available' | 'delivered'
@@ -40,6 +41,7 @@ interface OrdersState {
   deliverOrder: (orderId: string) => Promise<void>
   cancelOrderUnder21: (orderId: string) => Promise<string>
   cancelOrderClientRejected: (orderId: string) => Promise<string>
+  releaseOrder: (orderId: string, payload: ReleaseOrderBody) => Promise<string>
   setMode: (mode: OrdersViewMode) => void
 }
 
@@ -296,6 +298,17 @@ export const useOrdersStore = create<OrdersState>()(
         }))
 
         return response.message
+      },
+      releaseOrder: async (orderId: string, payload: ReleaseOrderBody) => {
+        const responseMessage = await releaseOrder(orderId, payload)
+
+        set((state) => ({
+          orders: normalizeOrders(state.orders).filter((order) => order.id !== orderId),
+          availableOrders: normalizeOrders(state.availableOrders).filter((order) => order.id !== orderId),
+          selectedOrder: state.selectedOrder?.id === orderId ? null : state.selectedOrder,
+        }))
+
+        return responseMessage
       },
     }),
     {

@@ -109,6 +109,26 @@ export interface CancelOrderData {
   }
 }
 
+export type ReleaseReasonCode =
+  | 'wrong_order'
+  | 'breakdown'
+  | 'shift_ended'
+  | 'health_issue'
+  | 'route_issue'
+  | 'store_delay'
+  | 'emergency'
+  | 'other'
+
+export interface ReleaseReason {
+  code: ReleaseReasonCode
+  label: string
+}
+
+export interface ReleaseOrderBody {
+  reason: ReleaseReasonCode
+  comment?: string
+}
+
 export interface CourierEmployee {
   employee_id?: number
   courier_id?: number

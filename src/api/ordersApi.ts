@@ -9,7 +9,67 @@ import type {
   DeliveryStatus,
   MyDeliveriesData,
   Order,
+  ReleaseOrderBody,
+  ReleaseReason,
+  ReleaseReasonCode,
 } from '../types/models'
+
+const releaseReasonLabels: Record<ReleaseReasonCode, string> = {
+  wrong_order: 'Взял не тот заказ',
+  breakdown: 'Поломка транспорта',
+  shift_ended: 'Закончилась смена',
+  health_issue: 'Плохое самочувствие',
+  route_issue: 'Проблема с маршрутом',
+  store_delay: 'Долгое ожидание в магазине',
+  emergency: 'Форс-мажор',
+  other: 'Другое',
+}
+
+function isReleaseReasonCode(value: unknown): value is ReleaseReasonCode {
+  return typeof value === 'string' && value in releaseReasonLabels
+}
+
+function normalizeReleaseReasons(data: unknown): ReleaseReason[] {
+  const source = Array.isArray(data)
+    ? data
+    : typeof data === 'object' && data !== null && 'reasons' in data
+      ? (data as { reasons?: unknown }).reasons
+      : null
+
+  if (!Array.isArray(source)) {
+    throw new Error('Сервер вернул некорректный список причин')
+  }
+
+  const reasons = source.flatMap((item): ReleaseReason[] => {
+    if (isReleaseReasonCode(item)) {
+      return [{ code: item, label: releaseReasonLabels[item] }]
+    }
+
+    if (typeof item !== 'object' || item === null) {
+      return []
+    }
+
+    const value = item as Record<string, unknown>
+    const code = value.code ?? value.value ?? value.reason
+
+    if (!isReleaseReasonCode(code)) {
+      return []
+    }
+
+    const label = value.label ?? value.name ?? value.title
+    return [{ code, label: typeof label === 'string' && label.trim() ? label : releaseReasonLabels[code] }]
+  })
+
+  const uniqueReasons = reasons.filter(
+    (reason, index) => reasons.findIndex((item) => item.code === reason.code) === index,
+  )
+
+  if (uniqueReasons.length === 0) {
+    throw new Error('Сервер вернул пустой список причин')
+  }
+
+  return uniqueReasons
+}
 
 function normalizeStatus(statusName?: string, statusCode?: number): DeliveryStatus {
   if (statusCode === 3) {
@@ -200,6 +260,16 @@ export async function cancelOrderClientRejected(orderId: string): Promise<ApiRes
     `/courier/orders/${orderId}/cancel-client-rejected`,
   )
   return response.data
+}
+
+export async function getReleaseReasons(): Promise<ReleaseReason[]> {
+  const response = await apiClient.get<ApiResponse<unknown>>('/courier/orders/release-reasons')
+  return normalizeReleaseReasons(response.data.data)
+}
+
+export async function releaseOrder(orderId: string, payload: ReleaseOrderBody): Promise<string> {
+  const response = await apiClient.post<ApiResponse<unknown>>(`/courier/orders/${orderId}/release`, payload)
+  return response.data.message
 }
 
 export async function updateOrderStatus(orderId: string, status: DeliveryStatus): Promise<void> {

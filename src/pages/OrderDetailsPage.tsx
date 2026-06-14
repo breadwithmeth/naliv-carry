@@ -3,9 +3,12 @@ import {
   Button,
   Collapse,
   Empty,
+  Input,
   List,
   message,
+  Modal,
   Popconfirm,
+  Select,
   Space,
   Spin,
 } from 'antd'
@@ -13,10 +16,11 @@ import { EnvironmentOutlined, PhoneOutlined, WhatsAppOutlined } from '@ant-desig
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { getApiErrorMessage } from '../api/errors'
+import { getReleaseReasons } from '../api/ordersApi'
 import { StatusTag } from '../components/common/StatusTag'
 import { useSnackbar } from '../hooks/useSnackbar'
 import { useOrdersStore } from '../store/ordersStore'
-import type { Order } from '../types/models'
+import type { Order, ReleaseReason, ReleaseReasonCode } from '../types/models'
 import { formatLocalDateTime } from '../utils/dateTime'
 import { build2gisNavigationUrl } from '../utils/navigation'
 
@@ -74,11 +78,18 @@ export function OrderDetailsPage() {
   const deliverOrder = useOrdersStore((state) => state.deliverOrder)
   const cancelOrderUnder21 = useOrdersStore((state) => state.cancelOrderUnder21)
   const cancelOrderClientRejected = useOrdersStore((state) => state.cancelOrderClientRejected)
+  const releaseOrder = useOrdersStore((state) => state.releaseOrder)
   const selectedOrder = useOrdersStore((state) => state.selectedOrder)
   const [isBusy, setIsBusy] = useState(() => Boolean(orderId))
   const [isTakingOrder, setIsTakingOrder] = useState(false)
   const [isDeliveringOrder, setIsDeliveringOrder] = useState(false)
   const [cancelingAction, setCancelingAction] = useState<'under_21' | 'client_rejected' | null>(null)
+  const [isReleaseModalOpen, setIsReleaseModalOpen] = useState(false)
+  const [releaseReasons, setReleaseReasons] = useState<ReleaseReason[]>([])
+  const [releaseReason, setReleaseReason] = useState<ReleaseReasonCode | undefined>()
+  const [releaseComment, setReleaseComment] = useState('')
+  const [isLoadingReleaseReasons, setIsLoadingReleaseReasons] = useState(false)
+  const [isReleasingOrder, setIsReleasingOrder] = useState(false)
   const { showError } = useSnackbar()
 
   useEffect(() => {
@@ -187,6 +198,56 @@ export function OrderDetailsPage() {
       showError(getApiErrorMessage(error, 'Не удалось отменить заказ'))
     } finally {
       setCancelingAction(null)
+    }
+  }
+
+  const openReleaseModal = async () => {
+    if (isLoadingReleaseReasons || isReleasingOrder) {
+      return
+    }
+
+    setIsReleaseModalOpen(true)
+    setIsLoadingReleaseReasons(true)
+
+    try {
+      const reasons = await getReleaseReasons()
+      setReleaseReasons(reasons)
+    } catch (error) {
+      setIsReleaseModalOpen(false)
+      showError(getApiErrorMessage(error, 'Не удалось загрузить причины снятия заказа'))
+    } finally {
+      setIsLoadingReleaseReasons(false)
+    }
+  }
+
+  const closeReleaseModal = () => {
+    if (isReleasingOrder) {
+      return
+    }
+
+    setIsReleaseModalOpen(false)
+    setReleaseReason(undefined)
+    setReleaseComment('')
+  }
+
+  const onReleaseOrder = async () => {
+    if (!selectedOrder || !releaseReason || isReleasingOrder) {
+      return
+    }
+
+    setIsReleasingOrder(true)
+
+    try {
+      const responseMessage = await releaseOrder(selectedOrder.id, {
+        reason: releaseReason,
+        ...(releaseComment.trim() ? { comment: releaseComment.trim() } : {}),
+      })
+      message.success(responseMessage || 'Вы сняты с заказа')
+      navigate('/orders')
+    } catch (error) {
+      showError(getApiErrorMessage(error, 'Не удалось снять заказ'))
+    } finally {
+      setIsReleasingOrder(false)
     }
   }
 
@@ -435,10 +496,51 @@ export function OrderDetailsPage() {
                   Клиент отказался
                 </Button>
               </Popconfirm>
+              <Button
+                className="touch-action danger-action"
+                onClick={() => void openReleaseModal()}
+                loading={isLoadingReleaseReasons}
+                disabled={isCancelDisabled || isLoadingReleaseReasons || isReleasingOrder}
+              >
+                Снять с себя
+              </Button>
             </Space>
           </div>
         </section>
       ) : null}
+
+      <Modal
+        title="Снять с себя заказ"
+        open={isReleaseModalOpen}
+        okText="Снять с заказа"
+        cancelText="Назад"
+        okButtonProps={{ danger: true, disabled: !releaseReason, loading: isReleasingOrder }}
+        cancelButtonProps={{ disabled: isReleasingOrder }}
+        closable={!isReleasingOrder}
+        maskClosable={!isReleasingOrder}
+        onOk={() => void onReleaseOrder()}
+        onCancel={closeReleaseModal}
+      >
+        <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+          <p className="panel__text">Выберите причину. После подтверждения заказ исчезнет из ваших доставок.</p>
+          <Select
+            style={{ width: '100%' }}
+            placeholder="Причина снятия"
+            value={releaseReason}
+            loading={isLoadingReleaseReasons}
+            disabled={isLoadingReleaseReasons || isReleasingOrder}
+            options={releaseReasons.map((reason) => ({ value: reason.code, label: reason.label }))}
+            onChange={(value: ReleaseReasonCode) => setReleaseReason(value)}
+          />
+          <Input.TextArea
+            rows={4}
+            placeholder="Комментарий (необязательно)"
+            value={releaseComment}
+            disabled={isReleasingOrder}
+            onChange={(event) => setReleaseComment(event.target.value)}
+          />
+        </Space>
+      </Modal>
     </div>
   )
 }
