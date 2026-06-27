@@ -2,15 +2,18 @@ import Keycloak from 'keycloak-js'
 import type { AuthUser } from '../types/models'
 import { clearTokens, getStoredTokens, setTokens } from './tokenStorage'
 
-const keycloak = new Keycloak({
-  url: import.meta.env.VITE_KEYCLOAK_URL ?? 'https://sec.naliv.kz',
-  realm: import.meta.env.VITE_KEYCLOAK_REALM ?? 'naliv-prod',
-  clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID ?? 'naliv-courier',
-})
-
 const enableSilentSso = String(import.meta.env.VITE_KEYCLOAK_SILENT_SSO ?? 'false') === 'true'
 const useHashRouter = String(import.meta.env.VITE_ROUTER_MODE ?? 'browser') === 'hash'
 
+function createKeycloak(): Keycloak {
+  return new Keycloak({
+    url: import.meta.env.VITE_KEYCLOAK_URL ?? 'https://sec.naliv.kz',
+    realm: import.meta.env.VITE_KEYCLOAK_REALM ?? 'naliv-prod',
+    clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID ?? 'naliv-courier',
+  })
+}
+
+let keycloak = createKeycloak()
 let initialized = false
 let initPromise: Promise<boolean> | null = null
 
@@ -78,16 +81,16 @@ function buildAppUrl(path: string): string {
   return useHashRouter ? `${window.location.origin}/#${path}` : `${window.location.origin}${path}`
 }
 
-function persistCurrentTokens(): void {
-  if (!keycloak.token || !keycloak.refreshToken) {
+function persistCurrentTokens(client = keycloak): void {
+  if (!client.token || !client.refreshToken) {
     clearTokens()
     return
   }
 
   setTokens({
-    accessToken: keycloak.token,
-    refreshToken: keycloak.refreshToken,
-    idToken: keycloak.idToken,
+    accessToken: client.token,
+    refreshToken: client.refreshToken,
+    idToken: client.idToken,
   })
 }
 
@@ -99,7 +102,12 @@ export async function initKeycloak(onLoad: 'check-sso' | 'login-required' = 'che
   }
 
   if (!initPromise) {
-    const initOptions: Parameters<typeof keycloak.init>[0] = {
+    if (keycloak.didInitialize) {
+      keycloak = createKeycloak()
+    }
+
+    const activeKeycloak = keycloak
+    const initOptions: Parameters<typeof activeKeycloak.init>[0] = {
       pkceMethod: 'S256',
       checkLoginIframe: false,
       onLoad,
@@ -121,14 +129,14 @@ export async function initKeycloak(onLoad: 'check-sso' | 'login-required' = 'che
       initOptions.idToken = storedTokens.idToken
     }
 
-    initPromise = keycloak
+    initPromise = activeKeycloak
       .init(initOptions)
       .then((authenticated) => {
         initialized = true
         cleanupKeycloakQueryParams()
 
         if (authenticated) {
-          persistCurrentTokens()
+          persistCurrentTokens(activeKeycloak)
         } else {
           clearTokens()
         }
@@ -138,6 +146,7 @@ export async function initKeycloak(onLoad: 'check-sso' | 'login-required' = 'che
       .catch((error) => {
         cleanupKeycloakQueryParams()
         clearTokens()
+        keycloak = createKeycloak()
         throw error
       })
       .finally(() => {
