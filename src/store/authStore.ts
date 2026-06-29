@@ -1,99 +1,178 @@
 import { create } from 'zustand'
-import type { AuthUser } from '../types/models'
-import { getCourierProfile } from '../api/courierApi'
 import {
-  getKeycloakAccessToken,
-  initKeycloak,
-  isKeycloakAuthenticated,
-  keycloakLogin,
-  keycloakLogout,
-  updateKeycloakToken,
-} from '../utils/keycloak.ts'
+  getCourierAccessStatus,
+  loginCourierByTelegram,
+  requestCourierAccess,
+} from '../api/authApi'
+import type {
+  AuthUser,
+  CourierAccessRequest,
+  CourierAccessStatus,
+  CourierEmployee,
+  CourierTelegramRequestAccessBody,
+  TelegramCourier,
+} from '../types/models'
+import { clearCourierToken } from '../utils/tokenStorage'
 
 interface AuthState {
   user: AuthUser | null
   accessToken: string | null
+  accessStatus: CourierAccessStatus | null
+  accessRequest: CourierAccessRequest | null
+  statusEmployee: TelegramCourier | CourierEmployee | null
+  authError: string | null
   isAuthenticated: boolean
   isInitialized: boolean
   isLoading: boolean
   initialize: () => Promise<void>
   login: () => Promise<void>
-  refreshToken: () => Promise<void>
+  requestAccess: (form: CourierTelegramRequestAccessBody) => Promise<void>
   logout: () => Promise<void>
+}
+
+let initializePromise: Promise<void> | null = null
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error && error.message.trim() ? error.message : 'Не удалось проверить доступ'
+}
+
+function getCourierId(courier: TelegramCourier | CourierEmployee): string {
+  return (
+    ('workforce_employee_id' in courier ? courier.workforce_employee_id : undefined) ??
+    (courier.courier_id ? String(courier.courier_id) : undefined) ??
+    ('employee_id' in courier && courier.employee_id ? String(courier.employee_id) : undefined) ??
+    courier.telegram_user_id ??
+    courier.login
+  )
+}
+
+function toAuthUser(courier: TelegramCourier | CourierEmployee): AuthUser {
+  return {
+    id: getCourierId(courier),
+    name: courier.name ?? courier.login,
+    phoneOrEmail: courier.telegram_username ? `@${courier.telegram_username}` : courier.login,
+  }
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   accessToken: null,
+  accessStatus: null,
+  accessRequest: null,
+  statusEmployee: null,
+  authError: null,
   isAuthenticated: false,
   isInitialized: false,
   isLoading: false,
   initialize: async () => {
-    set({ isLoading: true })
-    try {
-      await initKeycloak('check-sso')
-      const accessToken = getKeycloakAccessToken()
+    if (initializePromise) {
+      return initializePromise
+    }
 
-      let user: AuthUser | null = null
-      if (isKeycloakAuthenticated()) {
-        try {
-          const profile = await getCourierProfile()
-          const employee = profile.employee
-          const resolvedId =
-            employee.workforce_employee_id ??
-            employee.keycloak_id ??
-            (employee.employee_id ? String(employee.employee_id) : null) ??
-            (employee.courier_id ? String(employee.courier_id) : null) ??
-            'unknown'
+    initializePromise = (async () => {
+      set({ isLoading: true, authError: null })
 
-          user = {
-            id: resolvedId,
-            name: employee.name ?? employee.login,
-            phoneOrEmail: employee.login,
-          }
-        } catch {
-          user = null
+      try {
+        const statusData = await getCourierAccessStatus()
+
+        if (statusData.status !== 'APPROVED') {
+          clearCourierToken()
+          set({
+            user: null,
+            accessToken: null,
+            accessStatus: statusData.status,
+            accessRequest: statusData.request,
+            statusEmployee: statusData.employee,
+            isAuthenticated: false,
+            isInitialized: true,
+          })
+          return
         }
-      }
 
+        const loginData = await loginCourierByTelegram()
+
+        set({
+          user: toAuthUser(loginData.courier),
+          accessToken: loginData.token,
+          accessStatus: statusData.status,
+          accessRequest: statusData.request,
+          statusEmployee: loginData.courier,
+          isAuthenticated: true,
+          isInitialized: true,
+        })
+      } catch (error) {
+        clearCourierToken()
+        set({
+          user: null,
+          accessToken: null,
+          authError: getErrorMessage(error),
+          isAuthenticated: false,
+          isInitialized: true,
+        })
+      } finally {
+        set({ isLoading: false })
+        initializePromise = null
+      }
+    })()
+
+    return initializePromise
+  },
+  login: async () => {
+    set({ isLoading: true, authError: null })
+    try {
+      const loginData = await loginCourierByTelegram()
       set({
-        user,
-        accessToken,
-        isAuthenticated: isKeycloakAuthenticated(),
+        user: toAuthUser(loginData.courier),
+        accessToken: loginData.token,
+        accessStatus: 'APPROVED',
+        accessRequest: null,
+        statusEmployee: loginData.courier,
+        isAuthenticated: true,
         isInitialized: true,
       })
-    } catch {
+    } catch (error) {
+      clearCourierToken()
       set({
         user: null,
         accessToken: null,
+        authError: getErrorMessage(error),
         isAuthenticated: false,
         isInitialized: true,
       })
+      throw error
     } finally {
       set({ isLoading: false })
     }
   },
-  login: async () => {
-    await keycloakLogin()
-  },
-  refreshToken: async () => {
-    const accessToken = await updateKeycloakToken(120)
-    set({
-      accessToken,
-      isAuthenticated: isKeycloakAuthenticated(),
-    })
-  },
-  logout: async () => {
-    set({ isLoading: true })
+  requestAccess: async (form) => {
+    set({ isLoading: true, authError: null })
     try {
-      await keycloakLogout()
-    } finally {
+      const statusData = await requestCourierAccess(form)
+      clearCourierToken()
       set({
         user: null,
         accessToken: null,
+        accessStatus: statusData.status,
+        accessRequest: statusData.request,
+        statusEmployee: statusData.employee,
         isAuthenticated: false,
-        isLoading: false,
+        isInitialized: true,
       })
+    } catch (error) {
+      set({ authError: getErrorMessage(error), isInitialized: true })
+      throw error
+    } finally {
+      set({ isLoading: false })
     }
+  },
+  logout: async () => {
+    clearCourierToken()
+    set({
+      user: null,
+      accessToken: null,
+      isAuthenticated: false,
+      isInitialized: true,
+      isLoading: false,
+    })
   },
 }))

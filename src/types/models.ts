@@ -80,11 +80,6 @@ export interface Order {
   updatedAt: string
 }
 
-export interface AuthTokens {
-  accessToken: string
-  refreshToken: string
-}
-
 export interface AuthUser {
   id: string
   name: string
@@ -94,7 +89,95 @@ export interface AuthUser {
 export interface ApiResponse<T> {
   success: boolean
   data: T
-  message: string
+  message?: string
+  error?: {
+    message?: string
+  }
+}
+
+export type CourierAccessStatus = 'NOT_REQUESTED' | 'PENDING' | 'REJECTED' | 'APPROVED'
+
+export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue }
+
+export interface CourierAccessRequest {
+  request_id: number
+  telegram_user_id: string
+  telegram_username?: string | null
+  full_name: string
+  phone: string
+  birth_date?: string | null
+  iin?: string | null
+  city?: string | null
+  address?: string | null
+  vehicle_type?: string | null
+  has_own_vehicle?: boolean | null
+  vehicle_make?: string | null
+  vehicle_model?: string | null
+  vehicle_year?: number | null
+  vehicle_color?: string | null
+  vehicle_plate?: string | null
+  driver_license_number?: string | null
+  driver_license_categories?: string | null
+  document_type?: string | null
+  document_number?: string | null
+  emergency_contact_name?: string | null
+  emergency_contact_phone?: string | null
+  experience_years?: number | null
+  preferred_work_area?: string | null
+  availability?: string | null
+  comment?: string | null
+  extra_data?: JsonValue | null
+  status: CourierAccessStatus
+  rejection_reason?: string | null
+  created_at: string
+}
+
+export interface TelegramCourier {
+  courier_id: number
+  login: string
+  name: string
+  access_level: string
+  telegram_user_id: string
+  telegram_username?: string | null
+}
+
+export interface CourierTelegramAccessData {
+  status: CourierAccessStatus
+  request: CourierAccessRequest | null
+  employee: TelegramCourier | CourierEmployee | null
+}
+
+export interface CourierTelegramRequestAccessBody {
+  full_name: string
+  phone: string
+  birth_date?: string
+  iin?: string
+  city?: string
+  address?: string
+  vehicle_type?: string
+  has_own_vehicle?: boolean
+  vehicle_make?: string
+  vehicle_model?: string
+  vehicle_year?: number
+  vehicle_color?: string
+  vehicle_plate?: string
+  driver_license_number?: string
+  driver_license_categories?: string
+  document_type?: string
+  document_number?: string
+  emergency_contact_name?: string
+  emergency_contact_phone?: string
+  experience_years?: number
+  preferred_work_area?: string
+  availability?: string
+  comment?: string
+  extra_data?: JsonValue
+}
+
+export interface CourierTelegramLoginData {
+  token: string
+  courier: TelegramCourier
+  is_new_link: boolean
 }
 
 export interface CancelOrderData {
@@ -135,17 +218,13 @@ export interface CourierEmployee {
   login: string
   name?: string
   access_level: string
-  keycloak_id?: string
   workforce_employee_id?: string
+  telegram_user_id?: string
+  telegram_username?: string | null
 }
 
 export interface CourierProfileData {
   employee: CourierEmployee
-}
-
-export interface ChangePasswordBody {
-  currentPassword: string
-  newPassword: string
 }
 
 export interface City {
@@ -449,14 +528,4 @@ export interface BackendOrderDetailsData {
     items?: BackendOrderItem[]
     cost_summary?: BackendOrderCostSummary
   }
-}
-
-export interface LoginRequest {
-  phoneOrEmail: string
-  password: string
-}
-
-export interface LoginResponse {
-  user: AuthUser
-  tokens: AuthTokens
 }

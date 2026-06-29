@@ -1,16 +1,10 @@
-import { Button, Collapse, Form, Input, Space, message } from 'antd'
+import { Button, Space, message } from 'antd'
 import { CopyOutlined, LogoutOutlined, UserOutlined } from '@ant-design/icons'
 import { useEffect, type ReactNode } from 'react'
-import { changeCourierPassword } from '../api/courierApi'
 import { useSnackbar } from '../hooks/useSnackbar'
 import { useAuthStore } from '../store/authStore'
 import { useCourierStore } from '../store/courierStore'
 import { useSessionStore } from '../store/sessionStore'
-
-interface ChangePasswordValues {
-  currentPassword: string
-  newPassword: string
-}
 
 export function ProfilePage() {
   const user = useAuthStore((state) => state.user)
@@ -29,20 +23,11 @@ export function ProfilePage() {
     })
   }, [hydrateDeviceInfo, loadProfile])
 
-  const handleChangePassword = async (values: ChangePasswordValues) => {
-    try {
-      await changeCourierPassword(values)
-      message.success('Пароль изменен')
-    } catch {
-      showError('Не удалось изменить пароль')
-    }
-  }
-
   const workforceId =
     profile?.workforce_employee_id ??
-    profile?.keycloak_id ??
     (profile?.employee_id ? String(profile.employee_id) : undefined) ??
     (profile?.courier_id ? String(profile.courier_id) : undefined) ??
+    profile?.telegram_user_id ??
     '-'
 
   const handleCopyWorkforceId = async (): Promise<void> => {
@@ -87,47 +72,10 @@ export function ProfilePage() {
             </Button>
           </ProfileField>
           <ProfileField label="Доступ" value={profile?.access_level ?? '-'} />
+          <ProfileField label="Telegram" value={profile?.telegram_username ? `@${profile.telegram_username}` : '-'} />
           <ProfileField label="Устройство" value={deviceInfo} />
         </div>
       </section>
-
-      <Collapse
-        items={[
-          {
-            key: 'password',
-            label: 'Сменить пароль',
-            children: (
-              <Form layout="vertical" onFinish={handleChangePassword} requiredMark={false}>
-                <Form.Item
-                  name="currentPassword"
-                  label="Текущий пароль"
-                  rules={[{ required: true, message: 'Введите текущий пароль' }]}
-                >
-                  <Input.Password className="touch-action" />
-                </Form.Item>
-                <Form.Item
-                  name="newPassword"
-                  label="Новый пароль"
-                  rules={[
-                    { required: true, message: 'Введите новый пароль' },
-                    { min: 6, message: 'Минимум 6 символов' },
-                    {
-                      pattern: /^(?=.*[A-Za-z])(?=.*\d).+$/,
-                      message: 'Пароль должен содержать буквы и цифры',
-                    },
-                  ]}
-                >
-                  <Input.Password className="touch-action" />
-                </Form.Item>
-
-                <Button type="primary" htmlType="submit" className="touch-action" block>
-                  Сохранить пароль
-                </Button>
-              </Form>
-            ),
-          },
-        ]}
-      />
 
       <Button
         className="touch-action danger-action"

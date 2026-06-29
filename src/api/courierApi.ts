@@ -1,7 +1,6 @@
 import { apiClient } from './client'
 import type {
   ApiResponse,
-  ChangePasswordBody,
   CitiesData,
   CourierLocationData,
   CourierProfileData,
@@ -16,10 +15,6 @@ import type {
 export async function getCourierProfile(): Promise<CourierProfileData> {
   const response = await apiClient.get<ApiResponse<CourierProfileData>>('/courier/auth/profile')
   return response.data.data
-}
-
-export async function changeCourierPassword(payload: ChangePasswordBody): Promise<void> {
-  await apiClient.put<ApiResponse<null>>('/courier/auth/change-password', payload)
 }
 
 export async function getCities(): Promise<CitiesData> {

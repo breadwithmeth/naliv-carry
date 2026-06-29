@@ -269,7 +269,7 @@ export async function getReleaseReasons(): Promise<ReleaseReason[]> {
 
 export async function releaseOrder(orderId: string, payload: ReleaseOrderBody): Promise<string> {
   const response = await apiClient.post<ApiResponse<unknown>>(`/courier/orders/${orderId}/release`, payload)
-  return response.data.message
+  return response.data.message ?? 'Заказ освобожден'
 }
 
 export async function updateOrderStatus(orderId: string, status: DeliveryStatus): Promise<void> {

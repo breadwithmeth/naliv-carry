@@ -1,10 +1,7 @@
 import { useEffect } from 'react'
+import { getTelegramWebApp } from '../utils/telegram'
 
 const TELEGRAM_APP_BACKGROUND = '#0A0A0A'
-
-function getTelegramWebApp(): TelegramWebApp | null {
-  return window.Telegram?.WebApp ?? null
-}
 
 function applyTelegramViewport(webApp: TelegramWebApp): void {
   if (typeof webApp.viewportHeight === 'number' && webApp.viewportHeight > 0) {

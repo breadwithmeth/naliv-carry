@@ -269,7 +269,7 @@ export const useOrdersStore = create<OrdersState>()(
               : state.selectedOrder,
         }))
 
-        return response.message
+        return response.message ?? 'Заказ отменен'
       },
       cancelOrderClientRejected: async (orderId: string) => {
         const response = await cancelOrderClientRejected(orderId)
@@ -297,7 +297,7 @@ export const useOrdersStore = create<OrdersState>()(
               : state.selectedOrder,
         }))
 
-        return response.message
+        return response.message ?? 'Заказ отменен'
       },
       releaseOrder: async (orderId: string, payload: ReleaseOrderBody) => {
         const responseMessage = await releaseOrder(orderId, payload)

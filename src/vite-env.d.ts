@@ -2,6 +2,7 @@
 /// <reference types="vite-plugin-pwa/client" />
 
 interface TelegramWebApp {
+  initData?: string
   isExpanded?: boolean
   viewportHeight?: number
   viewportStableHeight?: number
