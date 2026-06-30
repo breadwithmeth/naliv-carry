@@ -23,6 +23,7 @@ import { useOrdersStore } from '../store/ordersStore'
 import type { Order, ReleaseReason, ReleaseReasonCode } from '../types/models'
 import { formatLocalDateTime } from '../utils/dateTime'
 import { build2gisNavigationUrl } from '../utils/navigation'
+import { buildPhoneCallUrl, openPhoneCall } from '../utils/phone'
 
 function getFiniteNumber(value: number | null | undefined): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) ? value : undefined
@@ -302,6 +303,7 @@ export function OrderDetailsPage() {
   const orderItems = selectedOrder.items ?? []
   const statusHistory = selectedOrder.statusHistory ?? []
   const orderTotalWithServiceFee = getOrderTotalWithServiceFee(selectedOrder)
+  const callUrl = buildPhoneCallUrl(selectedOrder.customerPhone)
 
   return (
     <div className="screen">
@@ -345,8 +347,13 @@ export function OrderDetailsPage() {
             </Button>
             <Button
               className="touch-action secondary-action"
-              href={`tel:${selectedOrder.customerPhone}`}
+              href={callUrl}
+              disabled={!callUrl}
               icon={<PhoneOutlined />}
+              onClick={(event) => {
+                event.preventDefault()
+                openPhoneCall(selectedOrder.customerPhone)
+              }}
             >
               Позвонить
             </Button>
