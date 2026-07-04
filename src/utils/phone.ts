@@ -11,31 +11,19 @@ export function buildPhoneCallUrl(phone: string | null | undefined): string | un
     return undefined
   }
 
-  const normalizedPhone = rawPhone.startsWith('+') ? `+${digits}` : digits
+  let normalizedPhone: string
+
+  if (rawPhone.startsWith('+')) {
+    normalizedPhone = `+${digits}`
+  } else if (digits.length === 10) {
+    normalizedPhone = `+7${digits}`
+  } else if (digits.length === 11 && digits.startsWith('8')) {
+    normalizedPhone = `+7${digits.slice(1)}`
+  } else if (digits.length === 11 && digits.startsWith('7')) {
+    normalizedPhone = `+${digits}`
+  } else {
+    normalizedPhone = digits
+  }
+
   return `tel:${normalizedPhone}`
-}
-
-export function openPhoneCall(phone: string | null | undefined): boolean {
-  const callUrl = buildPhoneCallUrl(phone)
-
-  if (!callUrl) {
-    return false
-  }
-
-  try {
-    const openedWindow = window.open(callUrl, '_self')
-
-    if (openedWindow) {
-      return true
-    }
-  } catch {
-    // Some WebViews reject non-http schemes through window.open.
-  }
-
-  try {
-    window.location.assign(callUrl)
-    return true
-  } catch {
-    return false
-  }
 }

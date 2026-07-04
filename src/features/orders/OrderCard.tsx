@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { StatusTag } from '../../components/common/StatusTag'
 import type { Order } from '../../types/models'
 import { build2gisNavigationUrl } from '../../utils/navigation'
-import { buildPhoneCallUrl, openPhoneCall } from '../../utils/phone'
+import { buildPhoneCallUrl } from '../../utils/phone'
 
 interface Props {
   order: Order
@@ -45,10 +45,6 @@ export function OrderCard({ order, onTakeOrder }: Props) {
           href={callUrl}
           disabled={!callUrl}
           icon={<PhoneOutlined />}
-          onClick={(event) => {
-            event.preventDefault()
-            openPhoneCall(order.customerPhone)
-          }}
         >
           Звонок
         </Button>
