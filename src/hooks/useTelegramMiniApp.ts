@@ -28,8 +28,8 @@ export function useTelegramMiniApp(): void {
     }
 
     try {
-      webApp.ready()
-      webApp.expand()
+      webApp.ready?.()
+      webApp.expand?.()
       webApp.setHeaderColor?.(TELEGRAM_APP_BACKGROUND)
       webApp.setBackgroundColor?.(TELEGRAM_APP_BACKGROUND)
       applyTelegramViewport(webApp)

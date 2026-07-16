@@ -1,5 +1,9 @@
 export function getTelegramWebApp(): TelegramWebApp | null {
-  return window.Telegram?.WebApp ?? null
+  try {
+    return window.Telegram?.WebApp ?? null
+  } catch {
+    return null
+  }
 }
 
 export function getTelegramInitData(): string {
@@ -9,8 +13,17 @@ export function getTelegramInitData(): string {
     throw new Error('Откройте приложение внутри Telegram')
   }
 
-  webApp.ready()
-  webApp.expand()
+  try {
+    webApp.ready?.()
+  } catch (e) {
+    console.warn('Telegram WebApp.ready() failed', e)
+  }
+
+  try {
+    webApp.expand?.()
+  } catch (e) {
+    console.warn('Telegram WebApp.expand() failed', e)
+  }
 
   return webApp.initData
 }
