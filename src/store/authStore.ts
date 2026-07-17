@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import {
   getCourierAccessStatus,
   loginCourierByTelegram,
+  loginCourierByToken,
   requestCourierAccess,
 } from '../api/authApi'
 import type {
@@ -12,7 +13,7 @@ import type {
   CourierTelegramRequestAccessBody,
   TelegramCourier,
 } from '../types/models'
-import { clearCourierToken } from '../utils/tokenStorage'
+import { clearCourierToken, getCourierToken } from '../utils/tokenStorage'
 
 interface AuthState {
   user: AuthUser | null
@@ -26,6 +27,7 @@ interface AuthState {
   isLoading: boolean
   initialize: () => Promise<void>
   login: () => Promise<void>
+  loginByToken: (token: string) => Promise<void>
   requestAccess: (form: CourierTelegramRequestAccessBody) => Promise<void>
   logout: () => Promise<void>
 }
@@ -54,6 +56,19 @@ function toAuthUser(courier: TelegramCourier | CourierEmployee): AuthUser {
   }
 }
 
+function extractTokenFromUrl(): string | null {
+  if (typeof window === 'undefined') return null
+  const params = new URLSearchParams(window.location.search)
+  return params.get('token')
+}
+
+function clearTokenFromUrl(): void {
+  if (typeof window === 'undefined') return
+  const url = new URL(window.location.href)
+  url.searchParams.delete('token')
+  window.history.replaceState({}, document.title, url.toString())
+}
+
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   accessToken: null,
@@ -73,6 +88,45 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ isLoading: true, authError: null })
 
       try {
+        // First check if there's a token in the URL
+        const urlToken = extractTokenFromUrl()
+        if (urlToken) {
+          clearTokenFromUrl()
+          const loginData = await loginCourierByToken(urlToken)
+          set({
+            user: toAuthUser(loginData.courier),
+            accessToken: loginData.token,
+            accessStatus: 'APPROVED',
+            accessRequest: null,
+            statusEmployee: loginData.courier,
+            isAuthenticated: true,
+            isInitialized: true,
+          })
+          return
+        }
+
+        // Check if there's a stored token
+        const storedToken = getCourierToken()
+        if (storedToken) {
+          try {
+            const loginData = await loginCourierByToken(storedToken)
+            set({
+              user: toAuthUser(loginData.courier),
+              accessToken: loginData.token,
+              accessStatus: 'APPROVED',
+              accessRequest: null,
+              statusEmployee: loginData.courier,
+              isAuthenticated: true,
+              isInitialized: true,
+            })
+            return
+          } catch {
+            // Token is invalid, clear it and continue with normal flow
+            clearCourierToken()
+          }
+        }
+
+        // Normal Telegram auth flow
         const statusData = await getCourierAccessStatus()
 
         if (statusData.status !== 'APPROVED') {
@@ -121,6 +175,33 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true, authError: null })
     try {
       const loginData = await loginCourierByTelegram()
+      set({
+        user: toAuthUser(loginData.courier),
+        accessToken: loginData.token,
+        accessStatus: 'APPROVED',
+        accessRequest: null,
+        statusEmployee: loginData.courier,
+        isAuthenticated: true,
+        isInitialized: true,
+      })
+    } catch (error) {
+      clearCourierToken()
+      set({
+        user: null,
+        accessToken: null,
+        authError: getErrorMessage(error),
+        isAuthenticated: false,
+        isInitialized: true,
+      })
+      throw error
+    } finally {
+      set({ isLoading: false })
+    }
+  },
+  loginByToken: async (token: string) => {
+    set({ isLoading: true, authError: null })
+    try {
+      const loginData = await loginCourierByToken(token)
       set({
         user: toAuthUser(loginData.courier),
         accessToken: loginData.token,

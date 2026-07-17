@@ -2,20 +2,35 @@ import { ConfigProvider, App as AntdApp, theme } from 'antd'
 import { useEffect } from 'react'
 import { AppErrorBoundary } from './components/common/AppErrorBoundary'
 import { useTelegramMiniApp } from './hooks/useTelegramMiniApp'
+import { useBootstrapSession } from './hooks/useBootstrapSession'
 import { AppRouter } from './routes/AppRouter'
 import { useThemeStore } from './store/themeStore'
+import { useAuthStore } from './store/authStore'
 
 function App() {
   const currentTheme = useThemeStore((state) => state.theme)
   const isDarkMode = currentTheme === 'dark'
   const algorithm = isDarkMode ? theme.darkAlgorithm : theme.defaultAlgorithm
+  const loginByToken = useAuthStore((state) => state.loginByToken)
 
   useTelegramMiniApp()
+  useBootstrapSession()
 
   useEffect(() => {
     document.documentElement.dataset.theme = currentTheme
     document.documentElement.style.colorScheme = currentTheme
   }, [currentTheme])
+
+  // Handle token from URL on initial load
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const token = params.get('token')
+    if (token) {
+      loginByToken(token).catch(() => {
+        // Error is handled in the store
+      })
+    }
+  }, [loginByToken])
 
   return (
     <ConfigProvider

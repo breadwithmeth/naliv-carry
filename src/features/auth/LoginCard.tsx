@@ -3,17 +3,19 @@ import {
   ClockCircleOutlined,
   CloseCircleOutlined,
   FormOutlined,
+  KeyOutlined,
   ReloadOutlined,
   SafetyCertificateOutlined,
   SendOutlined,
 } from '@ant-design/icons'
-import { Alert, Button, Checkbox, Form, Input, InputNumber, Select, Spin, message } from 'antd'
+import { Alert, Button, Checkbox, Form, Input, InputNumber, Modal, Select, Spin, message } from 'antd'
 import type { ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getApiErrorMessage } from '../../api/errors'
 import { useSnackbar } from '../../hooks/useSnackbar'
 import { useAuthStore } from '../../store/authStore'
 import type { CourierAccessStatus, CourierTelegramRequestAccessBody } from '../../types/models'
+import { useState } from 'react'
 
 const VEHICLE_OPTIONS = [
   { value: 'car', label: 'Авто' },
@@ -40,9 +42,13 @@ export function LoginCard() {
   const isInitialized = useAuthStore((state) => state.isInitialized)
   const isLoading = useAuthStore((state) => state.isLoading)
   const login = useAuthStore((state) => state.login)
+  const loginByToken = useAuthStore((state) => state.loginByToken)
   const requestAccess = useAuthStore((state) => state.requestAccess)
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { showError } = useSnackbar()
+  const [tokenModalOpen, setTokenModalOpen] = useState(false)
+  const [tokenInput, setTokenInput] = useState('')
 
   const handleLogin = async () => {
     try {
@@ -53,6 +59,26 @@ export function LoginCard() {
       showError(getApiErrorMessage(error, 'Попробуйте войти еще раз.'), {
         title: 'Не удалось выполнить вход',
       })
+    }
+  }
+
+  const handleLoginByToken = async (token: string) => {
+    try {
+      await loginByToken(token)
+      message.success('Вход выполнен')
+      navigate('/dashboard', { replace: true })
+    } catch (error) {
+      showError(getApiErrorMessage(error, 'Проверьте токен и попробуйте еще раз.'), {
+        title: 'Не удалось войти по токену',
+      })
+    }
+  }
+
+  const handleTokenSubmit = () => {
+    if (tokenInput.trim()) {
+      handleLoginByToken(tokenInput.trim())
+      setTokenModalOpen(false)
+      setTokenInput('')
     }
   }
 
@@ -76,6 +102,8 @@ export function LoginCard() {
       })
     }
   }
+
+  const urlToken = searchParams.get('token')
 
   return (
     <section className="screen">
@@ -136,16 +164,29 @@ export function LoginCard() {
           text="Войдите, чтобы получить courier token для работы с заказами."
           tone="success"
           action={
-            <Button
-              className="touch-action"
-              type="primary"
-              icon={<SafetyCertificateOutlined />}
-              loading={isLoading}
-              block
-              onClick={handleLogin}
-            >
-              Войти
-            </Button>
+            <>
+              <Button
+                className="touch-action"
+                type="primary"
+                icon={<SafetyCertificateOutlined />}
+                loading={isLoading}
+                block
+                onClick={handleLogin}
+              >
+                Войти через Telegram
+              </Button>
+              <div className="auth-divider">или</div>
+              <Button
+                className="touch-action"
+                type="default"
+                icon={<KeyOutlined />}
+                loading={isLoading}
+                block
+                onClick={() => setTokenModalOpen(true)}
+              >
+                Войти по токену
+              </Button>
+            </>
           }
         />
       ) : null}
@@ -185,17 +226,86 @@ export function LoginCard() {
       ) : null}
 
       {accessStatus === null && isInitialized && !authError ? (
-        <Button
-          className="touch-action"
-          type="primary"
-          icon={<ReloadOutlined />}
-          loading={isLoading}
-          block
-          onClick={handleStatusRefresh}
-        >
-          Проверить доступ
-        </Button>
+        <>
+          <Button
+            className="touch-action"
+            type="primary"
+            icon={<ReloadOutlined />}
+            loading={isLoading}
+            block
+            onClick={handleStatusRefresh}
+          >
+            Проверить доступ через Telegram
+          </Button>
+          <div className="auth-divider">или</div>
+          <Button
+            className="touch-action"
+            type="default"
+            icon={<KeyOutlined />}
+            loading={isLoading}
+            block
+            onClick={() => setTokenModalOpen(true)}
+          >
+            Войти по токену из ссылки
+          </Button>
+        </>
       ) : null}
+
+      {urlToken && accessStatus !== 'APPROVED' && isInitialized && (
+        <StatusPanel
+          icon={<KeyOutlined />}
+          title="Обнаружен токен в ссылке"
+          text="Мы нашли токен в URL. Нажмите кнопку ниже, чтобы войти."
+          tone="success"
+          action={
+            <Button
+              className="touch-action"
+              type="primary"
+              icon={<KeyOutlined />}
+              loading={isLoading}
+              block
+              onClick={() => handleLoginByToken(urlToken)}
+            >
+              Войти по токену из ссылки
+            </Button>
+          }
+        />
+      )}
+
+      <Modal
+        open={tokenModalOpen}
+        onOk={handleTokenSubmit}
+        onCancel={() => setTokenModalOpen(false)}
+        title="Вход по токену"
+        okText="Войти"
+        cancelText="Отмена"
+        centered
+        footer={null}
+      >
+        <div style={{ padding: '8px 0' }}>
+          <p style={{ marginBottom: 12, color: '#5F5F5F', fontSize: 14 }}>
+            Вставьте токен из ссылки приглашения или скопируйте его из браузера
+          </p>
+          <Input
+            className="touch-action"
+            value={tokenInput}
+            onChange={(e) => setTokenInput(e.target.value)}
+            placeholder="Вставьте токен сюда"
+            style={{ marginBottom: 12 }}
+            inputMode="text"
+          />
+          <Button
+            className="touch-action"
+            type="primary"
+            icon={<KeyOutlined />}
+            loading={isLoading}
+            block
+            onClick={handleTokenSubmit}
+          >
+            Войти
+          </Button>
+        </div>
+      </Modal>
     </section>
   )
 }

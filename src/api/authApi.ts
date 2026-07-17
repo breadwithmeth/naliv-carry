@@ -47,3 +47,13 @@ export async function loginCourierByTelegram(): Promise<CourierTelegramLoginData
   setCourierToken(data.token)
   return data
 }
+
+export async function loginCourierByToken(token: string): Promise<CourierTelegramLoginData> {
+  const response = await apiClient.post<ApiResponse<CourierTelegramLoginData>>('/courier/auth/token', {
+    token,
+  })
+
+  const data = unwrapApiResponse(response.data)
+  setCourierToken(data.token)
+  return data
+}
