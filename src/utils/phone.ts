@@ -27,7 +27,7 @@ export function buildPhoneCallUrl(phone: string | null | undefined): string | un
     normalizedPhone = digits
   }
 
-  return `tel:${normalizedPhone}`
+  return `https://carry.naliv.kz/call/${normalizedPhone}`
 }
 
 export function openPhoneCall(phone: string | null | undefined): boolean {
