@@ -58,6 +58,7 @@ export function LoginCard() {
     } catch (error) {
       showError(getApiErrorMessage(error, 'Попробуйте войти еще раз.'), {
         title: 'Не удалось выполнить вход',
+        error,
       })
     }
   }
@@ -70,6 +71,7 @@ export function LoginCard() {
     } catch (error) {
       showError(getApiErrorMessage(error, 'Проверьте токен и попробуйте еще раз.'), {
         title: 'Не удалось войти по токену',
+        error,
       })
     }
   }
@@ -89,6 +91,7 @@ export function LoginCard() {
     } catch (error) {
       showError(getApiErrorMessage(error, 'Проверьте данные и попробуйте еще раз.'), {
         title: 'Не удалось отправить заявку',
+        error,
       })
     }
   }
@@ -98,7 +101,8 @@ export function LoginCard() {
       await initialize()
     } catch (error) {
       showError(getApiErrorMessage(error, 'Попробуйте проверить доступ еще раз.'), {
-        title: 'Не удалось проверить доступ',
+        title: 'Не удалоcь проверить доступ',
+        error,
       })
     }
   }

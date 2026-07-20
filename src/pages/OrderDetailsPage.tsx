@@ -143,7 +143,7 @@ export function OrderDetailsPage() {
       await fetchOrderById(selectedOrderId)
       message.success('Заказ взят в доставку')
     } catch (error) {
-      showError(getApiErrorMessage(error, 'Не удалось взять заказ в доставку'))
+      showError(getApiErrorMessage(error, 'Не удалось взять заказ в доставку'), { error })
     } finally {
       setIsTakingOrder(false)
     }
@@ -162,7 +162,7 @@ export function OrderDetailsPage() {
       await fetchOrderById(selectedOrderId)
       message.success('Доставка подтверждена')
     } catch (error) {
-      showError(getApiErrorMessage(error, 'Не удалось подтвердить доставку'))
+      showError(getApiErrorMessage(error, 'Не удалось подтвердить доставку'), { error })
     } finally {
       setIsDeliveringOrder(false)
     }
@@ -181,7 +181,7 @@ export function OrderDetailsPage() {
       await fetchOrderById(selectedOrderId)
       message.success(responseMessage || 'Заказ отменен')
     } catch (error) {
-      showError(getApiErrorMessage(error, 'Не удалось отменить заказ'))
+      showError(getApiErrorMessage(error, 'Не удалось отменить заказ'), { error })
     } finally {
       setCancelingAction(null)
     }
@@ -200,7 +200,7 @@ export function OrderDetailsPage() {
       await fetchOrderById(selectedOrderId)
       message.success(responseMessage || 'Заказ отменен')
     } catch (error) {
-      showError(getApiErrorMessage(error, 'Не удалось отменить заказ'))
+      showError(getApiErrorMessage(error, 'Не удалось отменить заказ'), { error })
     } finally {
       setCancelingAction(null)
     }
@@ -219,7 +219,7 @@ export function OrderDetailsPage() {
       setReleaseReasons(reasons)
     } catch (error) {
       setIsReleaseModalOpen(false)
-      showError(getApiErrorMessage(error, 'Не удалось загрузить причины снятия заказа'))
+      showError(getApiErrorMessage(error, 'Не удалось загрузить причины снятия заказа'), { error })
     } finally {
       setIsLoadingReleaseReasons(false)
     }
@@ -250,7 +250,7 @@ export function OrderDetailsPage() {
       message.success(responseMessage || 'Вы сняты с заказа')
       navigate('/orders')
     } catch (error) {
-      showError(getApiErrorMessage(error, 'Не удалось снять заказ'))
+      showError(getApiErrorMessage(error, 'Не удалось снять заказ'), { error })
     } finally {
       setIsReleasingOrder(false)
     }
@@ -321,7 +321,7 @@ export function OrderDetailsPage() {
       await callClient({ clientPhone: digits })
       message.success('Звонок инициирован')
     } catch (error) {
-      showError(getApiErrorMessage(error, 'Не удалось инициировать звонок'))
+      showError(getApiErrorMessage(error, 'Не удалось инициировать звонок'), { error })
     } finally {
       setIsCalling(false)
     }

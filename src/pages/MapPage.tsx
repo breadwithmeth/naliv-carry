@@ -40,6 +40,7 @@ export function MapPage() {
 
   const handleSaveCurrentLocation = () => {
     if (!navigator.geolocation) {
+      // This is a browser feature detection, not an actual error object
       showError('Геолокация не поддерживается браузером')
       return
     }
@@ -49,12 +50,12 @@ export function MapPage() {
         try {
           await saveLocation(position.coords.latitude, position.coords.longitude)
           message.success('Геолокация курьера сохранена')
-        } catch {
-          showError('Не удалось сохранить геолокацию')
+        } catch (error) {
+          showError('Не удалось сохранить геолокацию', { error })
         }
       },
-      () => {
-        showError('Не удалось получить текущие координаты')
+      (error) => {
+        showError('Не удалось получить текущие координаты', { error })
       },
     )
   }

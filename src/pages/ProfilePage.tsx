@@ -38,8 +38,8 @@ export function ProfilePage() {
     try {
       await navigator.clipboard.writeText(workforceId)
       message.success('ID скопирован')
-    } catch {
-      showError('Не удалось скопировать ID')
+    } catch (error) {
+      showError('Не удалось скопировать ID', { error })
     }
   }
 

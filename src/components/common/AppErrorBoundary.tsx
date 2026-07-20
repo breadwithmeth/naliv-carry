@@ -52,11 +52,48 @@ export class AppErrorBoundary extends Component<Props, State> {
     const { error } = this.state
     if (!error?.stack) return null
     
-    // Extract first line of stack trace for debugging
+    // In development, show full stack trace
+    if (import.meta.env.DEV) {
+      return error.stack
+    }
+    
+    // In production, show only first line of stack trace
     const stackLines = error.stack.split('\n')
     if (stackLines.length > 1) {
       return stackLines[1].trim()
     }
+    return null
+  }
+
+  private getErrorDetails = (): string | null => {
+    const { error } = this.state
+    if (!error) return null
+
+    // In development mode, include additional error information
+    if (import.meta.env.DEV) {
+      const details: string[] = []
+      
+      // Add error name
+      if (error.name) {
+        details.push(`Name: ${error.name}`)
+      }
+      
+      // Add cause if available (TypeScript may not recognize Error.cause in older targets)
+      if ('cause' in error && error.cause) {
+        details.push(`Cause: ${String((error as { cause: unknown }).cause)}`)
+      }
+      
+      // Add full stack if not already included
+      if (error.stack) {
+        details.push('Stack Trace:')
+        details.push(error.stack)
+      }
+      
+      if (details.length > 0) {
+        return details.join('\n')
+      }
+    }
+    
     return null
   }
 
@@ -67,6 +104,7 @@ export class AppErrorBoundary extends Component<Props, State> {
 
     const errorMessage = this.getErrorMessage()
     const errorStack = this.getErrorStack()
+    const errorDetails = this.getErrorDetails()
 
     return (
       <main className="app-shell">
@@ -75,17 +113,17 @@ export class AppErrorBoundary extends Component<Props, State> {
             <span className="eyebrow">Ошибка приложения</span>
             <h1 className="empty-state__title">Экран не загрузился</h1>
             
-            {errorMessage && (
+            {(errorMessage || errorStack || errorDetails) && (
               <Alert
                 type="error"
                 showIcon
-                message="Детали ошибки:"
+                message={import.meta.env.DEV ? "Полные детали ошибки:" : "Детали ошибки:"}
                 description={
                   <pre style={{ 
                     whiteSpace: 'pre-wrap', 
                     wordBreak: 'break-all',
-                    fontSize: 12,
-                    maxHeight: 200,
+                    fontSize: import.meta.env.DEV ? 11 : 12,
+                    maxHeight: import.meta.env.DEV ? 400 : 200,
                     overflow: 'auto',
                     background: 'rgba(0,0,0,0.1)',
                     padding: 8,
@@ -95,6 +133,9 @@ export class AppErrorBoundary extends Component<Props, State> {
                     {errorStack ? `
 
 ${errorStack}` : ''}
+                    {errorDetails ? `
+
+${errorDetails}` : ''}
                   </pre>
                 }
               />

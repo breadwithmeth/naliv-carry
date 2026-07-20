@@ -24,8 +24,8 @@ export function ShiftsPage() {
       .then(async () => {
         await calculateShiftDeliveries()
       })
-      .catch(() => {
-        showError('Не удалось загрузить смены')
+      .catch((error) => {
+        showError('Не удалось загрузить смены', { error })
       })
   }, [calculateShiftDeliveries, loadShifts, showError])
 
@@ -33,8 +33,8 @@ export function ShiftsPage() {
     try {
       await openShift()
       message.success('Смена открыта')
-    } catch {
-      showError(useShiftsStore.getState().errorMessage ?? 'Не удалось открыть смену')
+    } catch (error) {
+      showError(useShiftsStore.getState().errorMessage ?? 'Не удалось открыть смену', { error })
     }
   }
 
@@ -42,8 +42,8 @@ export function ShiftsPage() {
     try {
       await closeShift()
       message.success('Смена закрыта')
-    } catch {
-      showError(useShiftsStore.getState().errorMessage ?? 'Не удалось закрыть смену')
+    } catch (error) {
+      showError(useShiftsStore.getState().errorMessage ?? 'Не удалось закрыть смену', { error })
     }
   }
 

@@ -46,7 +46,7 @@ export function ShiftPaymentStatsPage() {
       setReport(data)
     } catch (error) {
       setReport(null)
-      showError(mapReportError(error))
+      showError(mapReportError(error), { error })
     } finally {
       setIsLoading(false)
     }
