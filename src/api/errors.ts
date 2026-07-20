@@ -1,5 +1,31 @@
 import { AxiosError } from 'axios'
 
+// Map of React minified error codes to their full messages
+const REACT_MINIFIED_ERRORS: Record<string, string> = {
+  '310': 'Invalid hook call. Hooks can only be called inside the body of a function component. This could happen for one of the following reasons:\n1. You might have mismatching versions of React and React DOM.\n2. You might be breaking the Rules of Hooks.\n3. You might have more than one copy of React in the same app.',
+  '321': 'React.Children.only expected to receive a single React element child.',
+  '185': 'You called a hook outside a React component or custom hook. React hooks must be called inside the body of a function component or a custom hook.',
+  '200': 'Rendered fewer hooks than expected. This may happen if you called a hook conditionally.',
+  '201': 'Rendered more hooks than expected. This may happen if you called a hook in a loop or conditionally.',
+  '268': 'You cannot render a <Router> inside another <Router>. You should never have more than one in your app.',
+  '284': 'Keys should be stable, predictable, and unique.',
+  '300': 'The returned value from useState, useReducer, useMemo or useCallback must be used directly, not destructured.',
+}
+
+/**
+ * Decode React minified error messages.
+ * In production builds, React shows minified error codes like "Minified React error #310"
+ * This function maps them back to readable messages.
+ */
+function decodeReactError(message: string): string | null {
+  const match = message.match(/Minified React error #(\d+)/)
+  if (match) {
+    const errorCode = match[1]
+    return REACT_MINIFIED_ERRORS[errorCode] ?? null
+  }
+  return null
+}
+
 interface ApiErrorBody {
   error?: {
     message?: unknown
@@ -114,6 +140,12 @@ function getFullErrorDetails(error: unknown): string {
   if (error instanceof Error) {
     if (error.message) {
       parts.push(`Message: ${error.message}`)
+      
+      // Try to decode React minified errors
+      const decoded = decodeReactError(error.message)
+      if (decoded) {
+        parts.push(`\nDecoded: ${decoded}`)
+      }
     }
     if (error.stack) {
       parts.push(`Stack: ${error.stack}`)
@@ -126,6 +158,16 @@ function getFullErrorDetails(error: unknown): string {
     if (messages.length > 0) {
       parts.push('Error Data:')
       parts.push(...messages.map(m => `  ${m}`))
+    }
+  }
+
+  // If we have an error string, try to decode it
+  if (!parts.length && typeof error === 'string') {
+    const decoded = decodeReactError(error)
+    if (decoded) {
+      parts.push(`Decoded React Error: ${decoded}`)
+    } else {
+      parts.push(error)
     }
   }
 
@@ -220,4 +262,12 @@ export function getApiErrorMessage(error: unknown, fallback: string): string {
  */
 export function getFullErrorText(error: unknown): string {
   return getFullErrorDetails(error)
+}
+
+/**
+ * Decode React minified error messages (e.g., "Minified React error #310")
+ * to their full, human-readable messages.
+ */
+export function decodeReactErrorMessage(message: string): string | null {
+  return decodeReactError(message)
 }

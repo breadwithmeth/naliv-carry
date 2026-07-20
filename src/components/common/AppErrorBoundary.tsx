@@ -1,5 +1,6 @@
 import { Alert, Button } from 'antd'
 import { Component, type ErrorInfo, type ReactNode } from 'react'
+import { decodeReactErrorMessage } from '../../api/errors'
 
 interface Props {
   children: ReactNode
@@ -36,12 +37,22 @@ export class AppErrorBoundary extends Component<Props, State> {
     
     // Extract meaningful error message
     if (error.message) {
+      // Try to decode React minified errors
+      const decoded = decodeReactErrorMessage(error.message)
+      if (decoded) {
+        return decoded
+      }
       return error.message
     }
     
     // Try to get message from error string representation
     const errorString = error.toString()
     if (errorString !== '[object Error]') {
+      // Try to decode React minified errors from string
+      const decoded = decodeReactErrorMessage(errorString)
+      if (decoded) {
+        return decoded
+      }
       return errorString
     }
     
