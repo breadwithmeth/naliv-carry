@@ -3,6 +3,7 @@ import { CourierLayout } from '../components/layout/CourierLayout'
 import { useBootstrapSession } from '../hooks/useBootstrapSession'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { useSyncQueue } from '../hooks/useSyncQueue'
+import { CallHandlerPage } from '../pages/CallHandlerPage'
 import { DashboardPage } from '../pages/DashboardPage'
 import { LoginPage } from '../pages/LoginPage'
 import { MapPage } from '../pages/MapPage'
@@ -24,6 +25,7 @@ export function AppRouter() {
     <Router>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/call/:phoneNumber" element={<CallHandlerPage />} />
 
         <Route
           path="/dashboard"
