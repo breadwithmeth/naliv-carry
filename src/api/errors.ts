@@ -98,6 +98,40 @@ function extractAllMessages(data: unknown): string[] {
   return messages
 }
 
+/**
+ * Extract all user-friendly message texts from error data for production display.
+ * Returns concatenated messages without technical labels.
+ */
+function extractUserMessages(data: unknown): string[] {
+  const messages: string[] = []
+  
+  if (!isApiErrorBody(data)) {
+    return messages
+  }
+
+  // Extract from error.message (without label)
+  const errorMessage = normalizeMessage(data.error?.message)
+  if (errorMessage) messages.push(errorMessage)
+
+  // Extract from error_description (without label)
+  const errorDescription = normalizeMessage(data.error_description)
+  if (errorDescription) messages.push(errorDescription)
+
+  // Extract from message (without label)
+  const message = normalizeMessage(data.message)
+  if (message) messages.push(message)
+
+  // Extract from error.details (without label)
+  const errorDetails = normalizeMessage(data.error?.details)
+  if (errorDetails) messages.push(errorDetails)
+
+  // Extract from details (without label)
+  const details = normalizeMessage(data.details)
+  if (details) messages.push(details)
+
+  return messages
+}
+
 function getFullErrorDetails(error: unknown): string {
   const parts: string[] = []
 
@@ -177,6 +211,7 @@ function getFullErrorDetails(error: unknown): string {
 /**
  * Get a user-friendly error message from an API error.
  * In development mode, appends full error details.
+ * In production, still shows all available text messages from the error.
  */
 export function getApiErrorMessage(error: unknown, fallback: string): string {
   const isDev = import.meta.env.DEV
@@ -202,6 +237,23 @@ export function getApiErrorMessage(error: unknown, fallback: string): string {
   }
 
   if (error instanceof AxiosError && isApiErrorBody(error.response?.data)) {
+    // Extract all user-friendly messages
+    const userMessages = extractUserMessages(error.response.data)
+    
+    if (userMessages.length > 0) {
+      const fullMessage = userMessages.join('\n')
+      
+      if (isDev) {
+        const details = getFullErrorDetails(error)
+        if (details && details !== fullMessage) {
+          return `${fullMessage}\n\n${details}`
+        }
+      }
+      
+      return fullMessage
+    }
+
+    // Fallback to first available message
     const message =
       normalizeMessage(error.response.data.error?.message) ??
       normalizeMessage(error.response.data.error_description) ??
@@ -219,16 +271,38 @@ export function getApiErrorMessage(error: unknown, fallback: string): string {
   }
 
   if (error instanceof Error && error.message.trim()) {
+    // Try to decode React minified errors
+    const decoded = decodeReactError(error.message)
+    const displayMessage = decoded ?? error.message
+    
     if (isDev) {
       const details = getFullErrorDetails(error)
-      if (details && details !== error.message) {
-        return `${error.message}\n\n${details}`
+      if (details && details !== displayMessage) {
+        return `${displayMessage}\n\n${details}`
       }
     }
-    return error.message
+    
+    return displayMessage
   }
 
   if (isApiErrorBody(error)) {
+    // Extract all user-friendly messages
+    const userMessages = extractUserMessages(error)
+    
+    if (userMessages.length > 0) {
+      const fullMessage = userMessages.join('\n')
+      
+      if (isDev) {
+        const details = getFullErrorDetails(error)
+        if (details && details !== fullMessage) {
+          return `${fullMessage}\n\n${details}`
+        }
+      }
+      
+      return fullMessage
+    }
+
+    // Fallback to first available message
     const message =
       normalizeMessage(error.error?.message) ??
       normalizeMessage(error.error_description) ??
