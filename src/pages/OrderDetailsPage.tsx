@@ -16,6 +16,7 @@ import { EnvironmentOutlined, PhoneOutlined, WhatsAppOutlined } from '@ant-desig
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { getApiErrorMessage } from '../api/errors'
+import { callClient } from '../api/courierApi'
 import { getReleaseReasons } from '../api/ordersApi'
 import { StatusTag } from '../components/common/StatusTag'
 import { useSnackbar } from '../hooks/useSnackbar'
@@ -23,7 +24,6 @@ import { useOrdersStore } from '../store/ordersStore'
 import type { Order, ReleaseReason, ReleaseReasonCode } from '../types/models'
 import { formatLocalDateTime } from '../utils/dateTime'
 import { build2gisNavigationUrl } from '../utils/navigation'
-import { buildPhoneCallUrl, callViaWebRTC } from '../utils/phone'
 
 function getFiniteNumber(value: number | null | undefined): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) ? value : undefined
@@ -91,7 +91,6 @@ export function OrderDetailsPage() {
   const [releaseComment, setReleaseComment] = useState('')
   const [isLoadingReleaseReasons, setIsLoadingReleaseReasons] = useState(false)
   const [isReleasingOrder, setIsReleasingOrder] = useState(false)
-  const [isCallingViaWebRTC, setIsCallingViaWebRTC] = useState(false)
   const { showError } = useSnackbar()
 
   useEffect(() => {
@@ -304,21 +303,22 @@ export function OrderDetailsPage() {
   const orderItems = selectedOrder.items ?? []
   const statusHistory = selectedOrder.statusHistory ?? []
   const orderTotalWithServiceFee = getOrderTotalWithServiceFee(selectedOrder)
-  const callUrl = buildPhoneCallUrl(selectedOrder.customerPhone)
+  const [isCalling, setIsCalling] = useState(false)
 
-  const handleWebRTCCall = async () => {
+  const handleCallClient = async () => {
     if (!selectedOrder?.customerPhone) {
       return
     }
     
-    setIsCallingViaWebRTC(true)
+    setIsCalling(true)
     try {
-      const success = await callViaWebRTC(selectedOrder.customerPhone)
-      if (!success) {
-        showError('Не удалось совершить звонок через WebRTC')
-      }
+      const digits = selectedOrder.customerPhone.replace(/\D/g, '')
+      await callClient({ clientPhone: digits })
+      message.success('Звонок инициирован')
+    } catch (error) {
+      showError(getApiErrorMessage(error, 'Не удалось инициировать звонок'))
     } finally {
-      setIsCallingViaWebRTC(false)
+      setIsCalling(false)
     }
   }
 
@@ -364,20 +364,12 @@ export function OrderDetailsPage() {
             </Button>
             <Button
               className="touch-action secondary-action"
-              href={callUrl}
-              disabled={!callUrl}
-              icon={<PhoneOutlined />}
-            >
-              Позвонить
-            </Button>
-            <Button
-              className="touch-action secondary-action"
-              onClick={handleWebRTCCall}
-              loading={isCallingViaWebRTC}
+              onClick={handleCallClient}
+              loading={isCalling}
               disabled={!selectedOrder?.customerPhone}
               icon={<PhoneOutlined />}
             >
-              WebRTC
+              Позвонить
             </Button>
             <Button
               className="touch-action secondary-action"

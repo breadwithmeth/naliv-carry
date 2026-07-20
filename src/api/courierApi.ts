@@ -47,6 +47,14 @@ export async function getShifts(): Promise<ShiftsListData> {
   return response.data.data
 }
 
+export interface CallClientBody {
+  clientPhone: string
+}
+
+export async function callClient(payload: CallClientBody): Promise<void> {
+  await apiClient.post('/courier/call/client', payload)
+}
+
 interface ShiftPaymentReportQuery {
   shiftId?: string
 }

@@ -1,12 +1,10 @@
-import { Button, Spin } from 'antd'
+import { Button } from 'antd'
 import { useParams, useNavigate } from 'react-router-dom'
-import { openPhoneCall, callViaWebRTC, closeWebRTCConnection } from '../utils/phone'
-import { useState } from 'react'
+import { openPhoneCall } from '../utils/phone'
 
 export function CallHandlerPage() {
   const { phoneNumber } = useParams<{ phoneNumber: string }>()
   const navigate = useNavigate()
-  const [isCalling, setIsCalling] = useState(false)
 
   const handleRegularCall = () => {
     if (phoneNumber) {
@@ -15,24 +13,7 @@ export function CallHandlerPage() {
     }
   }
 
-  const handleWebRTCCall = async () => {
-    if (!phoneNumber) return
-    
-    setIsCalling(true)
-    try {
-      const success = await callViaWebRTC(phoneNumber)
-      if (!success) {
-        handleRegularCall()
-      } else {
-        navigate(-1)
-      }
-    } finally {
-      setIsCalling(false)
-    }
-  }
-
   const handleGoBack = () => {
-    closeWebRTCConnection()
     navigate(-1)
   }
 
@@ -55,26 +36,13 @@ export function CallHandlerPage() {
         Позвонить на номер: {phoneNumber}
       </div>
       
-      {isCalling ? (
-        <Spin tip="Соединяем..." size="large" />
-      ) : (
-        <>
-          <Button
-            type="primary"
-            onClick={handleWebRTCCall}
-            style={{ width: '100%', maxWidth: 300 }}
-          >
-            Позвонить через WebRTC
-          </Button>
-          
-          <Button
-            onClick={handleRegularCall}
-            style={{ width: '100%', maxWidth: 300 }}
-          >
-            Обычный звонок
-          </Button>
-        </>
-      )}
+      <Button
+        type="primary"
+        onClick={handleRegularCall}
+        style={{ width: '100%', maxWidth: 300 }}
+      >
+        Позвонить
+      </Button>
       
       <Button
         onClick={handleGoBack}
