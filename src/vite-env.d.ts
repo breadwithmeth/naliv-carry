@@ -14,6 +14,7 @@ interface TelegramWebApp {
   offEvent?: (eventType: 'viewportChanged', callback: () => void) => void
   setHeaderColor?: (color: string) => void
   setBackgroundColor?: (color: string) => void
+  openLink?: (url: string) => void
 }
 
 interface Window {

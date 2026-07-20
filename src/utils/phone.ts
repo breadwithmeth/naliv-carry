@@ -1,3 +1,5 @@
+/// <reference path="../vite-env.d.ts" />
+
 export function buildPhoneCallUrl(phone: string | null | undefined): string | undefined {
   const rawPhone = phone?.trim()
 
@@ -35,6 +37,11 @@ export function openPhoneCall(phone: string | null | undefined): boolean {
   }
 
   try {
+    const webApp = window.Telegram?.WebApp
+    if (webApp?.openLink) {
+      webApp.openLink(url)
+      return true
+    }
     window.location.href = url
     return true
   } catch {
