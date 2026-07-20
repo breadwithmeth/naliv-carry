@@ -23,7 +23,7 @@ import { useOrdersStore } from '../store/ordersStore'
 import type { Order, ReleaseReason, ReleaseReasonCode } from '../types/models'
 import { formatLocalDateTime } from '../utils/dateTime'
 import { build2gisNavigationUrl } from '../utils/navigation'
-import { buildPhoneCallUrl } from '../utils/phone'
+import { buildPhoneCallUrl, callViaWebRTC } from '../utils/phone'
 
 function getFiniteNumber(value: number | null | undefined): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) ? value : undefined
@@ -91,6 +91,7 @@ export function OrderDetailsPage() {
   const [releaseComment, setReleaseComment] = useState('')
   const [isLoadingReleaseReasons, setIsLoadingReleaseReasons] = useState(false)
   const [isReleasingOrder, setIsReleasingOrder] = useState(false)
+  const [isCallingViaWebRTC, setIsCallingViaWebRTC] = useState(false)
   const { showError } = useSnackbar()
 
   useEffect(() => {
@@ -305,6 +306,22 @@ export function OrderDetailsPage() {
   const orderTotalWithServiceFee = getOrderTotalWithServiceFee(selectedOrder)
   const callUrl = buildPhoneCallUrl(selectedOrder.customerPhone)
 
+  const handleWebRTCCall = async () => {
+    if (!selectedOrder?.customerPhone) {
+      return
+    }
+    
+    setIsCallingViaWebRTC(true)
+    try {
+      const success = await callViaWebRTC(selectedOrder.customerPhone)
+      if (!success) {
+        showError('Не удалось совершить звонок через WebRTC')
+      }
+    } finally {
+      setIsCallingViaWebRTC(false)
+    }
+  }
+
   return (
     <div className="screen">
       <section className="screen-hero screen-hero--compact">
@@ -352,6 +369,15 @@ export function OrderDetailsPage() {
               icon={<PhoneOutlined />}
             >
               Позвонить
+            </Button>
+            <Button
+              className="touch-action secondary-action"
+              onClick={handleWebRTCCall}
+              loading={isCallingViaWebRTC}
+              disabled={!selectedOrder?.customerPhone}
+              icon={<PhoneOutlined />}
+            >
+              WebRTC
             </Button>
             <Button
               className="touch-action secondary-action"
