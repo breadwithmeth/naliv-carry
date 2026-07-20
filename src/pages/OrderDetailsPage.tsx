@@ -316,7 +316,8 @@ export function OrderDetailsPage() {
     
     setIsCalling(true)
     try {
-      const digits = selectedOrder.customerPhone.replace(/\D/g, '')
+      const phone = String(selectedOrder.customerPhone ?? '')
+      const digits = phone.replace(/\D/g, '')
       await callClient({ clientPhone: digits })
       message.success('Звонок инициирован')
     } catch (error) {
@@ -329,9 +330,9 @@ export function OrderDetailsPage() {
   return (
     <div className="screen">
       <section className="screen-hero screen-hero--compact">
-        <span className="eyebrow">Заказ #{selectedOrder.id}</span>
-        <h1 className="screen-title screen-title--sm">{selectedOrder.customerName}</h1>
-        <p className="screen-copy">{selectedOrder.address}</p>
+        <span className="eyebrow">Заказ #{String(selectedOrder.id ?? '')}</span>
+        <h1 className="screen-title screen-title--sm">{String(selectedOrder.customerName ?? '')}</h1>
+        <p className="screen-copy">{String(selectedOrder.address ?? '')}</p>
       </section>
 
       <section className="panel panel--accent">
@@ -400,12 +401,12 @@ export function OrderDetailsPage() {
         <div className="panel__body">
           <h2 className="panel__title">Главное</h2>
           <div className="info-list">
-            <InfoRow label="Телефон" value={selectedOrder.customerPhone} />
-            <InfoRow label="Адрес" value={selectedOrder.address} />
-            <InfoRow label="Квартира" value={addressDetails?.apartment} />
-            <InfoRow label="Подъезд" value={addressDetails?.entrance} />
-            <InfoRow label="Этаж" value={addressDetails?.floor} />
-            <InfoRow label="Оплата" value={selectedOrder.paymentTypeName} />
+            <InfoRow label="Телефон" value={String(selectedOrder.customerPhone ?? '')} />
+            <InfoRow label="Адрес" value={String(selectedOrder.address ?? '')} />
+            <InfoRow label="Квартира" value={String(addressDetails?.apartment ?? '')} />
+            <InfoRow label="Подъезд" value={String(addressDetails?.entrance ?? '')} />
+            <InfoRow label="Этаж" value={String(addressDetails?.floor ?? '')} />
+            <InfoRow label="Оплата" value={String(selectedOrder.paymentTypeName ?? '')} />
             <InfoRow label="Итого" value={formatMoney(orderTotalWithServiceFee)} />
             <InfoRow label="Точка" value={point} />
           </div>
@@ -471,12 +472,12 @@ export function OrderDetailsPage() {
             label: 'Системные данные',
             children: (
               <div className="info-list">
-                <InfoRow label="ID" value={selectedOrder.id} />
-                <InfoRow label="UUID" value={selectedOrder.orderUuid} />
-                <InfoRow label="Адрес в системе" value={selectedOrder.deliveryAddressName} />
-                <InfoRow label="Статус" value={selectedOrder.statusName ?? selectedOrder.status} />
+                <InfoRow label="ID" value={String(selectedOrder.id ?? '')} />
+                <InfoRow label="UUID" value={String(selectedOrder.orderUuid ?? '')} />
+                <InfoRow label="Адрес в системе" value={String(selectedOrder.deliveryAddressName ?? '')} />
+                <InfoRow label="Статус" value={String(selectedOrder.statusName ?? selectedOrder.status ?? '')} />
                 <InfoRow label="Создан" value={formatLocalDateTime(selectedOrder.createdAt)} />
-                <InfoRow label="Позиций" value={selectedOrder.itemsCount ?? orderItems.length} />
+                <InfoRow label="Позиций" value={String(selectedOrder.itemsCount ?? orderItems.length)} />
               </div>
             ),
           },
