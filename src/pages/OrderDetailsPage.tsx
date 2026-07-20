@@ -91,6 +91,7 @@ export function OrderDetailsPage() {
   const [releaseComment, setReleaseComment] = useState('')
   const [isLoadingReleaseReasons, setIsLoadingReleaseReasons] = useState(false)
   const [isReleasingOrder, setIsReleasingOrder] = useState(false)
+  const [isCalling, setIsCalling] = useState(false)
   const { showError } = useSnackbar()
 
   useEffect(() => {
@@ -307,7 +308,6 @@ export function OrderDetailsPage() {
   const orderItems = selectedOrder.items ?? []
   const statusHistory = selectedOrder.statusHistory ?? []
   const orderTotalWithServiceFee = getOrderTotalWithServiceFee(selectedOrder)
-  const [isCalling, setIsCalling] = useState(false)
 
   const handleCallClient = async () => {
     if (!selectedOrder?.customerPhone) {
