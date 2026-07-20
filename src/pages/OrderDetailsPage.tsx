@@ -120,10 +120,14 @@ export function OrderDetailsPage() {
       return 'https://wa.me/'
     }
 
-    const normalizedDigits = selectedOrder.customerPhone.replace(/\D/g, '')
-    const addressText = selectedOrder.address?.trim() || selectedOrder.deliveryAddressName?.trim() || 'вашему адресу'
-    const text = encodeURIComponent(`Здравствуйте! Это курьер по адресу: ${addressText}.`)
-    return `https://wa.me/${normalizedDigits}?text=${text}`
+    try {
+      const normalizedDigits = String(selectedOrder.customerPhone).replace(/\D/g, '')
+      const addressText = String(selectedOrder.address ?? selectedOrder.deliveryAddressName ?? 'вашему адресу')
+      const text = encodeURIComponent(`Здравствуйте! Это курьер по адресу: ${addressText}.`)
+      return `https://wa.me/${normalizedDigits}?text=${text}`
+    } catch {
+      return 'https://wa.me/'
+    }
   }, [selectedOrder])
 
   const onTakeOrder = async () => {
@@ -298,8 +302,8 @@ export function OrderDetailsPage() {
   const primaryActionLabel = isOrderInDelivery ? 'Выдать заказ' : 'Взять в доставку'
   const addressDetails = selectedOrder.deliveryAddressDetails
   const point = selectedOrder.businessName
-    ? `${selectedOrder.businessName}${selectedOrder.businessAddress ? `, ${selectedOrder.businessAddress}` : ''}`
-    : selectedOrder.businessAddress
+    ? `${String(selectedOrder.businessName)}${selectedOrder.businessAddress ? `, ${String(selectedOrder.businessAddress)}` : ''}`
+    : String(selectedOrder.businessAddress ?? '')
   const orderItems = selectedOrder.items ?? []
   const statusHistory = selectedOrder.statusHistory ?? []
   const orderTotalWithServiceFee = getOrderTotalWithServiceFee(selectedOrder)
@@ -388,7 +392,7 @@ export function OrderDetailsPage() {
           type="info"
           showIcon
           message="Комментарий к доставке"
-          description={selectedOrder.notes || selectedOrder.extra || addressDetails?.comment}
+          description={String(selectedOrder.notes || selectedOrder.extra || addressDetails?.comment || '')}
         />
       ) : null}
 
