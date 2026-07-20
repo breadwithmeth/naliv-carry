@@ -38,10 +38,22 @@ export function openPhoneCall(phone: string | null | undefined): boolean {
 
   try {
     const webApp = window.Telegram?.WebApp
+
     if (webApp?.openLink) {
+      // Telegram Mini App: openLink supports only http/https.
+      // The /call/ endpoint should redirect to tel: on the server side,
+      // or Telegram may handle it via its native phone call UI.
       webApp.openLink(url)
       return true
     }
+
+    // Outside Telegram: try direct tel: link first
+    const digits = phone?.replace(/\D/g, '') || ''
+    if (digits) {
+      window.location.href = `tel:${digits}`
+      return true
+    }
+
     window.location.href = url
     return true
   } catch {
