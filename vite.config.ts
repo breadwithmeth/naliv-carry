@@ -62,4 +62,16 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    // Split heavy vendor libraries into separate cached chunks so the entry
+    // chunk parses faster on cold starts inside the Telegram WebView.
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-antd': ['antd', '@ant-design/icons'],
+        },
+      },
+    },
+  },
 })

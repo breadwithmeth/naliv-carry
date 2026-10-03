@@ -54,3 +54,49 @@ export function useTelegramMiniApp(): void {
     }
   }, [])
 }
+
+const NESTED_ROUTE_PATTERNS = [/^\/orders\/[^/]+$/, /^\/map$/, /^\/profile$/, /^\/shifts\/payment-report$/]
+
+/** Show Telegram's in-app back button on nested routes; otherwise the swipe
+ * gesture / hardware back closes the whole Mini App and it looks like a crash. */
+export function useTelegramBackButton(pathname: string): void {
+  useEffect(() => {
+    const webApp = getTelegramWebApp()
+    const backButton = webApp?.BackButton
+
+    if (!backButton?.show || !backButton?.hide || !backButton?.onClick || !backButton?.offClick) {
+      return
+    }
+
+    const isNestedRoute = NESTED_ROUTE_PATTERNS.some((pattern) => pattern.test(pathname))
+
+    if (!isNestedRoute) {
+      try {
+        backButton.hide()
+      } catch {
+        // ignore
+      }
+      return
+    }
+
+    const handleBack = () => {
+      window.history.back()
+    }
+
+    try {
+      backButton.onClick(handleBack)
+      backButton.show()
+    } catch (error) {
+      console.warn('Telegram BackButton show failed', error)
+    }
+
+    return () => {
+      try {
+        backButton.offClick?.(handleBack)
+        backButton.hide?.()
+      } catch {
+        // ignore
+      }
+    }
+  }, [pathname])
+}

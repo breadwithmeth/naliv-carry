@@ -18,7 +18,7 @@ function unwrapApiResponse<T>(response: ApiResponse<T>): T {
 
 export async function getCourierAccessStatus(): Promise<CourierTelegramAccessData> {
   const response = await apiClient.post<ApiResponse<CourierTelegramAccessData>>('/courier/auth/telegram/status', {
-    initData: getTelegramInitData(),
+    initData: await getTelegramInitData(),
   })
 
   return unwrapApiResponse(response.data)
@@ -30,7 +30,7 @@ export async function requestCourierAccess(
   const response = await apiClient.post<ApiResponse<CourierTelegramAccessData>>(
     '/courier/auth/telegram/request-access',
     {
-      initData: getTelegramInitData(),
+      initData: await getTelegramInitData(),
       ...form,
     },
   )
@@ -40,7 +40,7 @@ export async function requestCourierAccess(
 
 export async function loginCourierByTelegram(): Promise<CourierTelegramLoginData> {
   const response = await apiClient.post<ApiResponse<CourierTelegramLoginData>>('/courier/auth/telegram', {
-    initData: getTelegramInitData(),
+    initData: await getTelegramInitData(),
   })
 
   const data = unwrapApiResponse(response.data)

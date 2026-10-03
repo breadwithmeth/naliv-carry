@@ -1,6 +1,7 @@
 import { Alert, Button } from 'antd'
 import { Component, type ErrorInfo, type ReactNode } from 'react'
 import { decodeReactErrorMessage } from '../../api/errors'
+import { formatErrorLog, logError } from '../../utils/errorLog'
 
 interface Props {
   children: ReactNode
@@ -20,6 +21,7 @@ export class AppErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
+    logError('boundary', error)
     console.error('App render failed', error, errorInfo)
   }
 
@@ -29,6 +31,11 @@ export class AppErrorBoundary extends Component<Props, State> {
 
   private reload = (): void => {
     window.location.reload()
+  }
+
+  private showErrorLog = (): void => {
+    // Rendered as a plain text block so the user can screenshot it for support.
+    window.prompt('Журнал ошибок (скопируйте для поддержки):', formatErrorLog())
   }
 
   private getErrorMessage = (): string => {
@@ -160,6 +167,9 @@ ${errorDetails}` : ''}
             </Button>
             <Button block className="touch-action secondary-action" onClick={this.reset}>
               Попробовать без перезагрузки
+            </Button>
+            <Button block type="text" className="touch-action" onClick={this.showErrorLog}>
+              Показать журнал ошибок
             </Button>
           </section>
         </div>

@@ -15,6 +15,13 @@ interface TelegramWebApp {
   setHeaderColor?: (color: string) => void
   setBackgroundColor?: (color: string) => void
   openLink?: (url: string) => void
+  BackButton?: {
+    isVisible?: boolean
+    show?: () => void
+    hide?: () => void
+    onClick?: (callback: () => void) => void
+    offClick?: (callback: () => void) => void
+  }
 }
 
 interface Window {

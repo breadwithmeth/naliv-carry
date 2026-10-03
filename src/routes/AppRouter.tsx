@@ -1,18 +1,38 @@
-import { Navigate, Route, BrowserRouter, HashRouter, Routes } from 'react-router-dom'
+import { Suspense, lazy } from 'react'
+import { Navigate, Route, BrowserRouter, HashRouter, Routes, useLocation } from 'react-router-dom'
+import { Spin } from 'antd'
 import { CourierLayout } from '../components/layout/CourierLayout'
 import { useBootstrapSession } from '../hooks/useBootstrapSession'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { useSyncQueue } from '../hooks/useSyncQueue'
-import { CallHandlerPage } from '../pages/CallHandlerPage'
-import { DashboardPage } from '../pages/DashboardPage'
-import { LoginPage } from '../pages/LoginPage'
-import { MapPage } from '../pages/MapPage'
-import { OrderDetailsPage } from '../pages/OrderDetailsPage'
-import { OrdersPage } from '../pages/OrdersPage'
-import { ProfilePage } from '../pages/ProfilePage'
-import { ShiftPaymentStatsPage } from '../pages/ShiftPaymentStatsPage'
-import { ShiftsPage } from '../pages/ShiftsPage'
+import { useTelegramBackButton } from '../hooks/useTelegramMiniApp'
 import { ProtectedRoute } from './ProtectedRoute'
+
+const CallHandlerPage = lazy(() => import('../pages/CallHandlerPage').then((m) => ({ default: m.CallHandlerPage })))
+const DashboardPage = lazy(() => import('../pages/DashboardPage').then((m) => ({ default: m.DashboardPage })))
+const LoginPage = lazy(() => import('../pages/LoginPage').then((m) => ({ default: m.LoginPage })))
+const MapPage = lazy(() => import('../pages/MapPage').then((m) => ({ default: m.MapPage })))
+const OrderDetailsPage = lazy(() => import('../pages/OrderDetailsPage').then((m) => ({ default: m.OrderDetailsPage })))
+const OrdersPage = lazy(() => import('../pages/OrdersPage').then((m) => ({ default: m.OrdersPage })))
+const ProfilePage = lazy(() => import('../pages/ProfilePage').then((m) => ({ default: m.ProfilePage })))
+const ShiftPaymentStatsPage = lazy(() =>
+  import('../pages/ShiftPaymentStatsPage').then((m) => ({ default: m.ShiftPaymentStatsPage })),
+)
+const ShiftsPage = lazy(() => import('../pages/ShiftsPage').then((m) => ({ default: m.ShiftsPage })))
+
+function RouteFallback() {
+  return (
+    <div style={{ minHeight: '50vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <Spin size="large" />
+    </div>
+  )
+}
+
+function TelegramBackButtonSync() {
+  const { pathname } = useLocation()
+  useTelegramBackButton(pathname)
+  return null
+}
 
 export function AppRouter() {
   useBootstrapSession()
@@ -23,7 +43,9 @@ export function AppRouter() {
 
   return (
     <Router>
-      <Routes>
+      <TelegramBackButtonSync />
+      <Suspense fallback={<RouteFallback />}>
+        <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/call/:phoneNumber" element={<CallHandlerPage />} />
 
@@ -99,7 +121,8 @@ export function AppRouter() {
           }
         />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
+        </Routes>
+      </Suspense>
     </Router>
   )
 }
