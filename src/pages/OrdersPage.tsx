@@ -15,11 +15,17 @@ const statusFilterOptions = [
 export function OrdersPage() {
   const setMode = useOrdersStore((state) => state.setMode)
   const myOrders = useOrdersStore((state) => (Array.isArray(state.orders) ? state.orders : []))
+  const deliveredOrders = useOrdersStore((state) =>
+    Array.isArray(state.deliveredOrders) ? state.deliveredOrders : [],
+  )
+  const deliveredStats = useOrdersStore((state) => state.deliveredStats)
   const fetchOrders = useOrdersStore((state) => state.fetchOrders)
+  const fetchDeliveredOrders = useOrdersStore((state) => state.fetchDeliveredOrders)
   const isLoading = useOrdersStore((state) => state.isLoading)
 
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('active')
+  const [deliveredLoadFailed, setDeliveredLoadFailed] = useState(false)
 
   useEffect(() => {
     setMode('my')
@@ -28,8 +34,31 @@ export function OrdersPage() {
     })
   }, [fetchOrders, setMode])
 
+  useEffect(() => {
+    if (statusFilter !== 'done') {
+      return
+    }
+
+    const now = new Date()
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    const formatDate = (date: Date): string =>
+      `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+
+    setDeliveredLoadFailed(false)
+    fetchDeliveredOrders(formatDate(monthStart), formatDate(now)).catch(() => {
+      // Fallback: use client-side delivered orders from my-deliveries.
+      setDeliveredLoadFailed(true)
+    })
+  }, [statusFilter, fetchDeliveredOrders])
+
+  const doneOrders = deliveredLoadFailed
+    ? myOrders.filter((order) => order.status === 'delivered')
+    : deliveredOrders
+
   const filteredOrders = useMemo(() => {
-    return myOrders.filter((order) => {
+    const source = statusFilter === 'done' ? doneOrders : myOrders
+
+    return source.filter((order) => {
       const searchMatch = `${order.id} ${order.customerName} ${order.address} ${order.customerPhone}`
         .toLowerCase()
         .includes(query.toLowerCase())
@@ -45,7 +74,7 @@ export function OrdersPage() {
 
       return searchMatch && statusMatch
     })
-  }, [myOrders, query, statusFilter])
+  }, [myOrders, doneOrders, query, statusFilter])
 
   const activeCount = useMemo(() => {
     return myOrders.filter((order) => order.status === 'pending' || order.status === 'on_the_way').length
@@ -82,6 +111,14 @@ export function OrdersPage() {
           onChange={(value) => setStatusFilter(value as StatusFilter)}
         />
       </Space>
+
+      {statusFilter === 'done' && (
+        <p className="screen-copy">
+          {deliveredStats.totalDelivered
+            ? `За месяц доставлено ${deliveredStats.totalDelivered} заказов на ${deliveredStats.totalEarnings}`
+            : 'За текущий месяц доставленных заказов нет'}
+        </p>
+      )}
 
       {isLoading ? (
         <div className="empty-state">
