@@ -171,28 +171,41 @@ export async function getAvailableOrders(
   }
 }
 
-export async function getDeliveredOrders(
-  startDate: string,
-  endDate: string,
-  page = 1,
-  limit = 20,
-): Promise<{
+export interface DeliveredOrdersQuery {
+  /** ID смены — при передаче start_date/end_date не нужны (бэкенд берет диапазон из смены) */
+  shiftId?: number
+  startDate?: string
+  endDate?: string
+  page?: number
+  limit?: number
+}
+
+export async function getDeliveredOrders(query: DeliveredOrdersQuery = {}): Promise<{
   orders: Order[]
   statistics: DeliveredOrdersData['statistics']
+  period?: DeliveredOrdersData['period']
+  shift?: DeliveredOrdersData['shift']
   pagination: MyDeliveriesData['pagination']
 }> {
+  const { shiftId, startDate, endDate, page = 1, limit = 20 } = query
+
   const response = await apiClient.get<ApiResponse<DeliveredOrdersData>>('/courier/orders/delivered', {
-    params: {
-      start_date: startDate,
-      end_date: endDate,
-      page,
-      limit,
-    },
+    params:
+      shiftId !== undefined
+        ? { shift_id: shiftId, page, limit }
+        : {
+            start_date: startDate,
+            end_date: endDate,
+            page,
+            limit,
+          },
   })
 
   return {
     orders: response.data.data.orders.map(mapBackendOrder),
     statistics: response.data.data.statistics,
+    period: response.data.data.period,
+    shift: response.data.data.shift,
     pagination: response.data.data.pagination,
   }
 }

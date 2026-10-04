@@ -104,7 +104,10 @@ export const useShiftsStore = create<ShiftsState>((set, get) => ({
           const endDate = shift.endedAt ?? new Date().toISOString()
 
           try {
-            const delivered = await getDeliveredOrders(startDate, endDate, 1, 100)
+            const shiftId = Number(shift.id)
+            const delivered = Number.isInteger(shiftId) && shiftId > 0
+              ? await getDeliveredOrders({ shiftId, limit: 100 })
+              : await getDeliveredOrders({ startDate, endDate, limit: 100 })
             return {
               shiftId: shift.id,
               deliveries: delivered.statistics.total_delivered,

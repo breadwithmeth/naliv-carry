@@ -2,6 +2,7 @@ import { Button, Empty, Input, Segmented, Space, Spin } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
 import { OrderCard } from '../features/orders/OrderCard'
 import { useOrdersStore } from '../store/ordersStore'
+import { useShiftsStore } from '../store/shiftsStore'
 
 type StatusFilter = 'active' | 'all' | 'done' | 'problem'
 
@@ -26,30 +27,48 @@ export function OrdersPage() {
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('active')
   const [deliveredLoadFailed, setDeliveredLoadFailed] = useState(false)
+  const [deliveredByShiftId, setDeliveredByShiftId] = useState<number | null>(null)
+  const activeShift = useShiftsStore((state) => state.activeShift)
+  const loadShifts = useShiftsStore((state) => state.loadShifts)
 
   useEffect(() => {
     setMode('my')
     fetchOrders().catch(() => {
       // Ignored: page may use persisted/offline data.
     })
-  }, [fetchOrders, setMode])
+    loadShifts().catch(() => {
+      // Ignored: fallback period is used when the shift is unknown.
+    })
+  }, [fetchOrders, setMode, loadShifts])
 
   useEffect(() => {
     if (statusFilter !== 'done') {
       return
     }
 
+    setDeliveredLoadFailed(false)
+
     const now = new Date()
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
     const formatDate = (date: Date): string =>
       `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 
-    setDeliveredLoadFailed(false)
-    fetchDeliveredOrders(formatDate(monthStart), formatDate(now)).catch(() => {
+    const shiftId = activeShift ? Number(activeShift.id) : NaN
+    if (Number.isInteger(shiftId) && shiftId > 0) {
+      setDeliveredByShiftId(shiftId)
+      fetchDeliveredOrders({ shiftId }).catch(() => {
+        // Fallback: use client-side delivered orders from my-deliveries.
+        setDeliveredLoadFailed(true)
+      })
+      return
+    }
+
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    setDeliveredByShiftId(null)
+    fetchDeliveredOrders({ startDate: formatDate(monthStart), endDate: formatDate(now) }).catch(() => {
       // Fallback: use client-side delivered orders from my-deliveries.
       setDeliveredLoadFailed(true)
     })
-  }, [statusFilter, fetchDeliveredOrders])
+  }, [statusFilter, activeShift, fetchDeliveredOrders])
 
   const doneOrders = deliveredLoadFailed
     ? myOrders.filter((order) => order.status === 'delivered')
@@ -115,8 +134,10 @@ export function OrdersPage() {
       {statusFilter === 'done' && (
         <p className="screen-copy">
           {deliveredStats.totalDelivered
-            ? `За месяц доставлено ${deliveredStats.totalDelivered} заказов на ${deliveredStats.totalEarnings}`
-            : 'За текущий месяц доставленных заказов нет'}
+            ? `${deliveredByShiftId ? `За смену №${deliveredByShiftId}` : 'За месяц'} оплачено ${deliveredStats.totalDelivered} заказов на ${deliveredStats.totalEarnings}`
+            : deliveredByShiftId
+              ? `За смену №${deliveredByShiftId} оплаченных заказов нет`
+              : 'За текущий месяц доставленных заказов нет'}
         </p>
       )}
 

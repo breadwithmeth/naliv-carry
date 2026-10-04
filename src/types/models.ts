@@ -472,13 +472,26 @@ export interface AvailableOrdersData {
 
 export interface DeliveredOrdersStatistics {
   total_delivered: number
+  total_credited_cancellations?: number
   total_earnings: number
   avg_delivery_price: number
+}
+
+export interface DeliveredOrdersShift {
+  shift_id: number
+  started_at: string
+  ended_at: string | null
+  source: 'local' | 'workforce'
 }
 
 export interface DeliveredOrdersData {
   orders: BackendDeliveryOrder[]
   statistics: DeliveredOrdersStatistics
+  period?: {
+    start_date: string
+    end_date: string
+  }
+  shift?: DeliveredOrdersShift
   pagination: MyDeliveriesData['pagination']
 }
 

@@ -34,7 +34,13 @@ interface OrdersState {
   }
   fetchOrders: (page?: number, limit?: number) => Promise<void>
   fetchAvailableOrders: (cityId: number, page?: number, limit?: number) => Promise<void>
-  fetchDeliveredOrders: (startDate: string, endDate: string, page?: number, limit?: number) => Promise<void>
+  fetchDeliveredOrders: (query?: {
+    shiftId?: number
+    startDate?: string
+    endDate?: string
+    page?: number
+    limit?: number
+  }) => Promise<void>
   fetchOrderById: (orderId: string) => Promise<Order | null>
   updateStatus: (orderId: string, status: DeliveryStatus) => Promise<void>
   takeOrder: (orderId: string) => Promise<void>
@@ -156,11 +162,11 @@ export const useOrdersStore = create<OrdersState>()(
           set({ isLoading: false })
         }
       },
-      fetchDeliveredOrders: async (startDate, endDate, page = 1, limit = 20) => {
+      fetchDeliveredOrders: async (query = {}) => {
         set({ isLoading: true })
 
         try {
-          const response = await getDeliveredOrders(startDate, endDate, page, limit)
+          const response = await getDeliveredOrders(query)
           set({
             deliveredOrders: response.orders,
             mode: 'delivered',

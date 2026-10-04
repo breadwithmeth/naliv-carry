@@ -4,8 +4,9 @@ import { Button, Card, Col, Empty, Row, Space, Statistic, Table, Tag, Typography
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getShiftPaymentReport } from '../api/courierApi'
+import { getDeliveredOrders } from '../api/ordersApi'
 import { useSnackbar } from '../hooks/useSnackbar'
-import type { ShiftPaymentReportData, ShiftPaymentReportShift } from '../types/models'
+import type { Order, ShiftPaymentReportData, ShiftPaymentReportShift } from '../types/models'
 import { formatLocalDateTime } from '../utils/dateTime'
 
 function formatMoney(value: number): string {
@@ -30,13 +31,39 @@ function mapReportError(error: unknown): string {
   return 'Не удалось загрузить отчет по оплатам'
 }
 
+function mapDeliveredError(error: unknown): string {
+  if (error instanceof AxiosError) {
+    if (error.response?.status === 404) {
+      return 'Смена не найдена для указанного shift_id'
+    }
+
+    if (error.response?.status === 401) {
+      return 'Необходимо снова войти в учетную запись'
+    }
+  }
+
+  return 'Не удалось загрузить оплаченные заказы смены'
+}
+
 export function ShiftPaymentStatsPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const shiftId = searchParams.get('shiftId')?.trim() || undefined
   const [isLoading, setIsLoading] = useState(true)
   const [report, setReport] = useState<ShiftPaymentReportData | null>(null)
+  const [deliveredOrders, setDeliveredOrders] = useState<Order[]>([])
+  const [deliveredStats, setDeliveredStats] = useState<{
+    total_delivered: number
+    total_credited_cancellations?: number
+    total_earnings: number
+    avg_delivery_price: number
+  } | null>(null)
   const { showError } = useSnackbar()
+
+  const numericShiftId = useMemo(() => {
+    const value = Number(shiftId)
+    return Number.isInteger(value) && value > 0 ? value : undefined
+  }, [shiftId])
 
   const loadReport = useCallback(async (): Promise<void> => {
     setIsLoading(true)
@@ -52,9 +79,28 @@ export function ShiftPaymentStatsPage() {
     }
   }, [shiftId, showError])
 
+  const loadDeliveredOrders = useCallback(async (): Promise<void> => {
+    if (numericShiftId === undefined) {
+      setDeliveredOrders([])
+      setDeliveredStats(null)
+      return
+    }
+
+    try {
+      const data = await getDeliveredOrders({ shiftId: numericShiftId, limit: 100 })
+      setDeliveredOrders(data.orders)
+      setDeliveredStats(data.statistics)
+    } catch (error) {
+      setDeliveredOrders([])
+      setDeliveredStats(null)
+      showError(mapDeliveredError(error), { error })
+    }
+  }, [numericShiftId, showError])
+
   useEffect(() => {
     void loadReport()
-  }, [loadReport])
+    void loadDeliveredOrders()
+  }, [loadReport, loadDeliveredOrders])
 
   const title = shiftId ? 'Оплата смены' : 'Оплата сейчас'
   const generatedAt = formatLocalDateTime(report?.generatedAt)
@@ -79,7 +125,10 @@ export function ShiftPaymentStatsPage() {
             className="touch-action secondary-action"
             icon={<ReloadOutlined />}
             loading={isLoading}
-            onClick={() => void loadReport()}
+            onClick={() => {
+              void loadReport()
+              void loadDeliveredOrders()
+            }}
           >
             Обновить
           </Button>
@@ -111,6 +160,93 @@ export function ShiftPaymentStatsPage() {
       {report?.shifts.map((shiftReport) => (
         <ShiftPaymentReportCard key={shiftReport.shift.id} shiftReport={shiftReport} isLoading={isLoading} />
       ))}
+
+      {numericShiftId !== undefined ? (
+        <Card title={`Оплаченные заказы смены ${numericShiftId}`}>
+          <Space direction="vertical" style={{ width: '100%' }}>
+            <Row gutter={[12, 12]}>
+              <Col xs={12} md={6}>
+                <Statistic
+                  title="Доставлено"
+                  value={deliveredStats?.total_delivered ?? 0}
+                  loading={isLoading}
+                />
+              </Col>
+              <Col xs={12} md={6}>
+                <Statistic
+                  title="Засчитанные отмены"
+                  value={deliveredStats?.total_credited_cancellations ?? 0}
+                  loading={isLoading}
+                />
+              </Col>
+              <Col xs={12} md={6}>
+                <Statistic
+                  title="Заработок"
+                  value={deliveredStats?.total_earnings ?? 0}
+                  suffix="₸"
+                  loading={isLoading}
+                />
+              </Col>
+              <Col xs={12} md={6}>
+                <Statistic
+                  title="Средний чек"
+                  value={deliveredStats?.avg_delivery_price ?? 0}
+                  suffix="₸"
+                  loading={isLoading}
+                />
+              </Col>
+            </Row>
+
+            <Table
+              size="small"
+              pagination={false}
+              loading={isLoading}
+              scroll={{ x: true }}
+              dataSource={deliveredOrders}
+              rowKey={(order) => order.id}
+              locale={{
+                emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Нет оплаченных заказов за смену" />,
+              }}
+              columns={[
+                {
+                  title: 'Заказ',
+                  dataIndex: 'id',
+                  key: 'id',
+                  render: (value: string) => `#${value}`,
+                },
+                {
+                  title: 'Клиент',
+                  dataIndex: 'customerName',
+                  key: 'customerName',
+                },
+                {
+                  title: 'Адрес',
+                  dataIndex: 'address',
+                  key: 'address',
+                },
+                {
+                  title: 'Статус',
+                  dataIndex: 'statusName',
+                  key: 'statusName',
+                  render: (value: string) => value || 'Доставлен',
+                },
+                {
+                  title: 'Доставка',
+                  dataIndex: 'deliveryPrice',
+                  key: 'deliveryPrice',
+                  render: (value: number) => formatMoney(value ?? 0),
+                },
+                {
+                  title: 'Дата доставки',
+                  dataIndex: 'createdAt',
+                  key: 'createdAt',
+                  render: (value: string | null) => (value ? formatLocalDateTime(value) : '-'),
+                },
+              ]}
+            />
+          </Space>
+        </Card>
+      ) : null}
 
       {!isLoading && !report?.shifts.length ? (
         <Card>
