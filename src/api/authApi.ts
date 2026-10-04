@@ -2,6 +2,8 @@ import axios from 'axios'
 import { apiClient } from './client'
 import type {
   ApiResponse,
+  CourierProfileData,
+  TelegramCourier,
   CourierTelegramAccessData,
   CourierTelegramLoginData,
   CourierTelegramRequestAccessBody,
@@ -57,6 +59,32 @@ export async function loginCourierByToken(token: string): Promise<CourierTelegra
   const data = unwrapApiResponse(response.data)
   setCourierToken(data.token)
   return data
+}
+
+/**
+ * Восстановление сессии по сохранённому JWT.
+ * Легаси-эндпоинт `/courier/auth/token` принимает hex-токен, а не JWT, и на новых
+ * бэкендах отсутствует (404) — тогда валидируем JWT через `/courier/auth/profile`.
+ */
+export async function loginCourierByStoredToken(token: string): Promise<CourierTelegramLoginData> {
+  try {
+    return await loginCourierByToken(token)
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 404) {
+      const response = await apiClient.get<ApiResponse<CourierProfileData>>('/courier/auth/profile')
+      const data = unwrapApiResponse(response.data)
+      const courier: TelegramCourier = {
+        courier_id: data.employee.courier_id ?? Number(data.employee.workforce_employee_id ?? 0),
+        login: data.employee.login,
+        name: data.employee.name ?? data.employee.login,
+        access_level: data.employee.access_level,
+        telegram_user_id: data.employee.telegram_user_id ?? '',
+        telegram_username: data.employee.telegram_username,
+      }
+      return { token, courier, is_new_link: false }
+    }
+    throw error
+  }
 }
 
 const MAGIC_LINK_ERRORS: Record<number, string> = {

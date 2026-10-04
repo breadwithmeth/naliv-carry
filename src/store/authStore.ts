@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import {
   getCourierAccessStatus,
   loginCourierByMagicLink,
+  loginCourierByStoredToken,
   loginCourierByTelegram,
   loginCourierByToken,
   requestCourierAccess,
@@ -112,7 +113,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         const storedToken = getCourierToken()
         if (storedToken) {
           try {
-            const loginData = await loginCourierByToken(storedToken)
+            const loginData = await loginCourierByStoredToken(storedToken)
             set({
               user: toAuthUser(loginData.courier),
               accessToken: loginData.token,
