@@ -108,10 +108,10 @@ export async function getShiftPaymentReport(query: ShiftPaymentReportQuery = {})
   const source = response.data.data
 
   return {
-    courierId: source.courier_id,
-    employeeId: source.employeeId,
-    requestedShiftId: source.requested_shift_id,
-    generatedAt: source.generated_at,
+    courierId: source.courier_id ?? 0,
+    employeeId: source.employeeId ?? '',
+    requestedShiftId: source.requested_shift_id ?? null,
+    generatedAt: source.generated_at ?? '',
     summary: {
       totalShifts: source.summary.total_shifts,
       closedShifts: source.summary.closed_shifts,
@@ -121,7 +121,7 @@ export async function getShiftPaymentReport(query: ShiftPaymentReportQuery = {})
     },
     shifts: source.shifts.map((shiftReport) => ({
       shift: {
-        id: shiftReport.shift.id,
+        id: String(shiftReport.shift.id),
         startedAt: shiftReport.shift.started_at,
         endedAt: shiftReport.shift.ended_at,
         status: shiftReport.shift.status,

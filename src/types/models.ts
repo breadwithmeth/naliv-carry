@@ -355,10 +355,10 @@ export interface BackendPaymentTypeStat {
 }
 
 export interface BackendShiftPaymentReportData {
-  courier_id: number
-  employeeId: string
-  requested_shift_id: string | null
-  generated_at: string
+  courier_id?: number
+  employeeId?: string
+  requested_shift_id?: string | null
+  generated_at?: string
   summary: {
     total_shifts: number
     closed_shifts: number
@@ -368,7 +368,7 @@ export interface BackendShiftPaymentReportData {
   }
   shifts: Array<{
     shift: {
-      id: string
+      id: number | string
       started_at: string
       ended_at: string | null
       status: ShiftStatus
