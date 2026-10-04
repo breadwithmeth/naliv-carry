@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import {
   getCourierAccessStatus,
+  loginCourierByMagicLink,
   loginCourierByTelegram,
   loginCourierByToken,
   requestCourierAccess,
@@ -12,8 +13,10 @@ import type {
   CourierEmployee,
   CourierTelegramRequestAccessBody,
   TelegramCourier,
+  CourierTelegramLoginData,
 } from '../types/models'
 import { clearCourierToken, getCourierToken } from '../utils/tokenStorage'
+import { clearUrlToken, extractUrlToken } from '../utils/urlToken'
 
 interface AuthState {
   user: AuthUser | null
@@ -28,6 +31,7 @@ interface AuthState {
   initialize: () => Promise<void>
   login: () => Promise<void>
   loginByToken: (token: string) => Promise<void>
+  loginByUrlToken: () => Promise<void>
   requestAccess: (form: CourierTelegramRequestAccessBody) => Promise<void>
   logout: () => Promise<void>
 }
@@ -56,17 +60,20 @@ function toAuthUser(courier: TelegramCourier | CourierEmployee): AuthUser {
   }
 }
 
-function extractTokenFromUrl(): string | null {
-  if (typeof window === 'undefined') return null
-  const params = new URLSearchParams(window.location.search)
-  return params.get('token')
+function urlTokenLoginState(loginData: CourierTelegramLoginData): Partial<AuthState> {
+  return {
+    user: toAuthUser(loginData.courier),
+    accessToken: loginData.token,
+    accessStatus: 'APPROVED',
+    accessRequest: null,
+    statusEmployee: loginData.courier,
+    isAuthenticated: true,
+    isInitialized: true,
+  }
 }
 
 function clearTokenFromUrl(): void {
-  if (typeof window === 'undefined') return
-  const url = new URL(window.location.href)
-  url.searchParams.delete('token')
-  window.history.replaceState({}, document.title, url.toString())
+  clearUrlToken()
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -89,19 +96,15 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       try {
         // First check if there's a token in the URL
-        const urlToken = extractTokenFromUrl()
-        if (urlToken) {
+        const urlTokenInfo = extractUrlToken()
+        if (urlTokenInfo) {
           clearTokenFromUrl()
-          const loginData = await loginCourierByToken(urlToken)
-          set({
-            user: toAuthUser(loginData.courier),
-            accessToken: loginData.token,
-            accessStatus: 'APPROVED',
-            accessRequest: null,
-            statusEmployee: loginData.courier,
-            isAuthenticated: true,
-            isInitialized: true,
-          })
+          // `courier_token` — magic link из бота; legacy `token` — старый флоу
+          const loginData =
+            urlTokenInfo.source === 'courier_token'
+              ? await loginCourierByMagicLink(urlTokenInfo.token)
+              : await loginCourierByToken(urlTokenInfo.token)
+          set(urlTokenLoginState(loginData))
           return
         }
 
@@ -211,6 +214,32 @@ export const useAuthStore = create<AuthState>((set) => ({
         isAuthenticated: true,
         isInitialized: true,
       })
+    } catch (error) {
+      clearCourierToken()
+      set({
+        user: null,
+        accessToken: null,
+        authError: getErrorMessage(error),
+        isAuthenticated: false,
+        isInitialized: true,
+      })
+      throw error
+    } finally {
+      set({ isLoading: false })
+    }
+  },
+  loginByUrlToken: async () => {
+    const urlTokenInfo = extractUrlToken()
+    if (!urlTokenInfo) return
+
+    set({ isLoading: true, authError: null })
+    try {
+      clearUrlToken()
+      const loginData =
+        urlTokenInfo.source === 'courier_token'
+          ? await loginCourierByMagicLink(urlTokenInfo.token)
+          : await loginCourierByToken(urlTokenInfo.token)
+      set(urlTokenLoginState(loginData))
     } catch (error) {
       clearCourierToken()
       set({

@@ -1,3 +1,4 @@
+import axios from 'axios'
 import { apiClient } from './client'
 import type {
   ApiResponse,
@@ -54,6 +55,34 @@ export async function loginCourierByToken(token: string): Promise<CourierTelegra
   })
 
   const data = unwrapApiResponse(response.data)
+  setCourierToken(data.token)
+  return data
+}
+
+const MAGIC_LINK_ERRORS: Record<number, string> = {
+  401: 'Ссылка недействительна или срок её действия истёк. Запросите новую ссылку в боте (/login)',
+  429: 'Слишком много попыток входа. Повторите позже',
+  404: 'Сервис входа по ссылке недоступен',
+}
+
+export async function loginCourierByMagicLink(token: string): Promise<CourierTelegramLoginData> {
+  let data: CourierTelegramLoginData
+  try {
+    const response = await apiClient.post<ApiResponse<CourierTelegramLoginData>>('/courier/auth/magic-link', {
+      token,
+    })
+    data = unwrapApiResponse(response.data)
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response) {
+      const status = error.response.status
+      const fallback = error.response.data as ApiResponse<unknown> | undefined
+      throw new Error(
+        MAGIC_LINK_ERRORS[status] || fallback?.error?.message || fallback?.message || 'Не удалось войти по ссылке',
+      )
+    }
+    throw error
+  }
+
   setCourierToken(data.token)
   return data
 }

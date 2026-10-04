@@ -11,7 +11,7 @@ function App() {
   const currentTheme = useThemeStore((state) => state.theme)
   const isDarkMode = currentTheme === 'dark'
   const algorithm = isDarkMode ? theme.darkAlgorithm : theme.defaultAlgorithm
-  const loginByToken = useAuthStore((state) => state.loginByToken)
+  const loginByUrlToken = useAuthStore((state) => state.loginByUrlToken)
 
   useTelegramMiniApp()
   useBootstrapSession()
@@ -21,16 +21,12 @@ function App() {
     document.documentElement.style.colorScheme = currentTheme
   }, [currentTheme])
 
-  // Handle token from URL on initial load
+  // Handle magic-link / legacy token from URL on initial load
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const token = params.get('token')
-    if (token) {
-      loginByToken(token).catch(() => {
-        // Error is handled in the store
-      })
-    }
-  }, [loginByToken])
+    loginByUrlToken().catch(() => {
+      // Error is handled in the store
+    })
+  }, [loginByUrlToken])
 
   return (
     <ConfigProvider

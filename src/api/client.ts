@@ -8,7 +8,7 @@ export const apiClient = axios.create({
 })
 
 apiClient.interceptors.request.use((config) => {
-  if (config.url?.startsWith('/courier/auth/telegram')) {
+  if (config.url?.startsWith('/courier/auth/telegram') || config.url?.startsWith('/courier/auth/magic-link')) {
     return config
   }
 
