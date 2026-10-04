@@ -8,6 +8,7 @@ import type {
   ShiftActionData,
   ShiftPaymentReportData,
   ShiftsListData,
+  CourierShift,
   SaveCourierLocationBody,
   SaveCourierLocationData,
 } from '../types/models'
@@ -42,9 +43,45 @@ export async function stopShift(): Promise<ShiftActionData> {
   return response.data.data
 }
 
+// Бэкенд отдаёт id/employeeId числами и дублирует поля в snake_case
+// (shift_id, courier_id, started_at, ...). Нормализуем к внутреннему типу.
+interface BackendShift {
+  id?: number | string
+  shift_id?: number | string
+  courier_id?: number | string
+  employeeId?: number | string
+  startedAt?: string
+  started_at?: string
+  endedAt?: string | null
+  ended_at?: string | null
+  status?: string
+}
+
+function normalizeShift(shift: BackendShift): CourierShift {
+  const id = shift.id ?? shift.shift_id
+  if (id === undefined) {
+    throw new Error('Смена без идентификатора')
+  }
+
+  return {
+    id: String(id),
+    employeeId: String(shift.employeeId ?? shift.courier_id ?? ''),
+    startedAt: shift.startedAt ?? shift.started_at ?? '',
+    endedAt: shift.endedAt ?? shift.ended_at ?? null,
+    status: shift.status === 'ACTIVE' ? 'ACTIVE' : 'CLOSED',
+  }
+}
+
 export async function getShifts(): Promise<ShiftsListData> {
-  const response = await apiClient.get<ApiResponse<ShiftsListData>>('/courier/shifts')
-  return response.data.data
+  const response = await apiClient.get<ApiResponse<{ employeeId?: number | string } & { shifts?: BackendShift[]; total?: number }>>(
+    '/courier/shifts',
+  )
+  const data = response.data.data
+  return {
+    employeeId: String(data.employeeId ?? ''),
+    shifts: (data.shifts ?? []).map(normalizeShift),
+    total: data.total ?? (data.shifts ?? []).length,
+  }
 }
 
 export interface CallClientBody {
